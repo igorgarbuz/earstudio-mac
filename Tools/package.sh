@@ -1,5 +1,5 @@
 #!/bin/bash
-# Create a local, ad-hoc-signed universal app archive and drag-install DMG.
+# Create an ad-hoc-signed universal app archive and drag-install DMG.
 # Deliberately does not install, notarize, upload, or access account credentials.
 set -euo pipefail
 
@@ -25,22 +25,28 @@ staging=$(mktemp -d "$project_root/build/dmg-staging.XXXXXX")
 trap 'rm -rf "$staging"' EXIT
 ditto "$archived_app" "$staging/EarStudio Companion.app"
 ln -s /Applications "$staging/Applications"
+cp "$project_root/LICENSE" "$staging/LICENSE.txt"
 cat >"$staging/Install.txt" <<'INSTALL'
 EarStudio Companion — macOS 14 or newer
 
-1. Quit any running preview of EarStudio Companion.
+1. Quit an earlier version of EarStudio Companion before replacing it.
 2. Drag EarStudio Companion.app onto the Applications folder beside it.
 3. Eject this disk image and open EarStudio Companion from Applications.
-4. Use Explore demo, or pair your ES100 in System Settings → Bluetooth
-   and choose Connect device in the app.
+4. Use Demo mode, or pair your ES100 in System Settings → Bluetooth
+   and choose Connect in the app.
 
 No audio driver or separate installer is required. The app includes Apple
 Silicon and Intel code. It starts disconnected and does not change device
 settings until you connect and use its controls.
 
-This is a local development build with ad-hoc signing, not a notarized
-public release. The DMG is not an Apple trust/notarization certificate.
-Real-device Bluetooth behavior still needs validation with an ES100.
+This community preview is ad-hoc signed and is not notarized by Apple.
+If macOS blocks the downloaded app, attempt to open it, then go to
+System Settings → Privacy & Security and choose Open Anyway.
+Only do this for the download you intentionally obtained from this project's
+GitHub Releases. Do not disable Gatekeeper globally.
+
+Hardware coverage is limited. Read the release notes for validation scope.
+The independent app code is MIT licensed; see LICENSE.txt.
 INSTALL
 
 image_name="EarStudio-Companion-$version-macOS-universal.dmg"

@@ -76,7 +76,7 @@ struct DeviceState: Equatable {
     var supportsHeadroom: Bool { firmwareAtLeast(1, 4, 0) }
     func firmwareAtLeast(_ major: Int, _ minor: Int, _ patch: Int) -> Bool {
         guard let v = firmware?.split(separator: ".").compactMap({ Int($0) }), v.count == 3 else { return false }
-        return v[0] * 10000 + v[1] * 100 + v[2] >= major * 10000 + minor * 100 + patch
+        return !v.lexicographicallyPrecedes([major, minor, patch])
     }
 
     /// Offsets include the status byte, exactly as in Android GaiaCommandManager.
@@ -98,19 +98,22 @@ struct DeviceState: Equatable {
                 autoPower = bit(13, 128) ? 1 : (bit(13, 64) ? 2 : 0)
                 crossfeed = Int(b[13] & 15); loopback = Wire.readVolume(b, 14)
             }
-            loaded.insert(.device)
+            // Short legacy/startup packets establish firmware, but must not
+            // enable controls whose fields were absent from that packet.
+            if b.count >= 16 { loaded.insert(.device) }
         case 0x0001:
+            guard firmware != nil else { return false }
             let required = supportsQ ? 11 : (supportsHeadroom ? 10 : (firmwareAtLeast(1, 3, 1) ? 8 : (firmwareAtLeast(1, 2, 4) ? 4 : 3)))
             guard b.count >= required else { return false }
             buffer = Int(b[1] & 15); led = Int(b[2] & 15)
-            if b.count >= 4 { batteryCare = bit(3, 128); codec = Int(b[3] & 15) }
-            if b.count >= 8 { leftTrim = Wire.readVolume(b, 4); rightTrim = Wire.readVolume(b, 6) }
-            if b.count >= 10 {
+            if firmwareAtLeast(1, 2, 4) { batteryCare = bit(3, 128); codec = Int(b[3] & 15) }
+            if firmwareAtLeast(1, 3, 1) { leftTrim = Wire.readVolume(b, 4); rightTrim = Wire.readVolume(b, 6) }
+            if supportsHeadroom {
                 reconnect = bit(3, 64); hfp = Int((b[3] >> 5) & 1)
                 volumeLimit = Wire.readVolume(b, 8)
                 if !supportsQ { usbBits = Int((b[3] >> 4) & 1) }
             }
-            if b.count >= 11 { usbBits = Int((b[10] >> 1) & 3) }
+            if supportsQ { usbBits = Int((b[10] >> 1) & 3) }
             loaded.insert(.info)
         case 0x0010:
             guard b.count >= 16 else { return false }
@@ -133,11 +136,12 @@ struct DeviceState: Equatable {
             decodeAmbient(b[14], b[15])
             loaded.formUnion([.audio, .battery])
         case 0x0050:
+            guard firmware != nil else { return false }
             guard b.count >= (supportsQ ? 16 : (supportsHeadroom ? 14 : 13)) else { return false }
             eqEnabled = b[1] != 0; preamp = Wire.readGain(b[2])
             bands = b[3..<13].map(Wire.readGain)
-            if b.count >= 14 { headroom = Int(b[13] & 15); analogCompensation = bit(13, 16) }
-            if b.count >= 16 { q = Int(Wire.readU16(b, 14)) }
+            if supportsHeadroom { headroom = Int(b[13] & 15); analogCompensation = bit(13, 16) }
+            if supportsQ { q = Int(Wire.readU16(b, 14)) }
             loaded.insert(.eq)
         case 0x0070, 0x0200:
             guard b.count >= 4 else { return false }

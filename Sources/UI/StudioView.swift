@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum StudioPage: String, CaseIterable, Identifiable {
-    case overview = "Overview", equalizer = "Equalizer", sound = "Sound", input = "Input", ambient = "Ambient & calls", system = "Device settings"
+    case overview = "Overview", equalizer = "Equalizer", sound = "Sound", input = "Input", ambient = "Ambient & calls", system = "Device settings", info = "Info"
     var id: String { rawValue }
     var icon: String {
         switch self {
@@ -11,16 +11,18 @@ enum StudioPage: String, CaseIterable, Identifiable {
         case .input: return "antenna.radiowaves.left.and.right"
         case .ambient: return "ear"
         case .system: return "gearshape"
+        case .info: return "info.circle"
         }
     }
     var subtitle: String {
         switch self {
-        case .overview: return "Your music. Your little studio."
-        case .equalizer: return "Shape the sound. Keep the detail."
-        case .sound: return "Fine-tune the ES100’s output and processing."
-        case .input: return "Bluetooth and USB, configured your way."
-        case .ambient: return "Stay in touch with the world around you."
-        case .system: return "The small things that make it yours."
+        case .overview: return "Device status and active audio settings."
+        case .equalizer: return "Ten-band EQ, presets, and processing headroom."
+        case .sound: return "Headphone output, amplifier modes, and DAC processing."
+        case .input: return "Bluetooth codecs and USB input settings."
+        case .ambient: return "Ambient microphone and voice call settings."
+        case .system: return "Power, battery, and device preferences."
+        case .info: return "Audio connections and settings explained."
         }
     }
 }
@@ -52,6 +54,7 @@ struct StudioView: View {
                         case .input: InputView()
                         case .ambient: AmbientView()
                         case .system: SystemView()
+                        case .info: InfoView()
                         }
                     }.padding(.horizontal, 28).padding(.top, 3).padding(.bottom, 25)
                 }
@@ -76,7 +79,7 @@ struct StudioView: View {
                     Text("COMPANION").font(.system(size: 8, weight: .medium)).tracking(2.7).foregroundStyle(StudioTheme.secondary)
                 }
             }.padding(.horizontal, 23).padding(.top, 50).padding(.bottom, 36)
-            Text("YOUR STUDIO").sectionCaption().padding(.horizontal, 25).padding(.bottom, 12)
+            Text("DEVICE CONTROLS").sectionCaption().padding(.horizontal, 25).padding(.bottom, 12)
             ForEach(StudioPage.allCases) { item in
                 Button { page = item } label: {
                     HStack(spacing: 12) {
@@ -105,7 +108,7 @@ struct StudioView: View {
                 }.buttonStyle(.plain)
             }.padding(15).background(.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 12)).padding(14)
             HStack {
-                Button(model.isDemo ? "Exit demo" : "Explore demo") { model.isDemo ? model.disconnect() : model.enterDemo() }
+                Button(model.isDemo ? "Exit demo" : "Demo mode") { model.isDemo ? model.disconnect() : model.enterDemo() }
                     .disabled(model.isBusy || model.phase == .connected)
                 Spacer()
                 Button { model.showDiagnostics = true } label: { Image(systemName: "ellipsis.circle") }.help("Diagnostics")
@@ -120,7 +123,7 @@ struct StudioView: View {
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 10) {
-                StatusPill(text: model.isDemo ? "DEMO · NO DEVICE" : model.phase.rawValue.uppercased(), color: model.isDemo ? .orange : (model.canEdit ? StudioTheme.green : StudioTheme.secondary))
+                StatusPill(text: model.isDemo ? "DEMO · NO DEVICE" : model.phase.rawValue.uppercased(), color: model.phase.statusColor)
                 if model.state.loaded.contains(.battery) {
                     Label("\(model.state.battery)%", systemImage: model.state.charging ? "battery.100percent.bolt" : "battery.75percent")
                         .font(.system(size: 11, weight: .medium)).foregroundStyle(StudioTheme.secondary)
@@ -132,7 +135,7 @@ struct StudioView: View {
         HStack(spacing: 12) {
             Image(systemName: model.phase == .confirmation ? "hand.tap" : "antenna.radiowaves.left.and.right").font(.system(size: 18)).foregroundStyle(StudioTheme.green)
             VStack(alignment: .leading, spacing: 4) {
-                Text(model.phase == .confirmation ? "Briefly press the ES100 power button" : (model.isBusy ? model.phase.rawValue + "…" : "Connect your EarStudio to get started"))
+                Text(model.phase == .confirmation ? "Briefly press the ES100 power button" : (model.isBusy ? model.phase.rawValue + "…" : "Connect an ES100 to read and change settings"))
                     .font(.system(size: 12, weight: .semibold))
                 Text(model.phase == .confirmation ? "Confirm within three minutes. This Mac will remember your device." : "Settings are read from your device when it connects.")
                     .font(.system(size: 11)).foregroundStyle(StudioTheme.secondary)
@@ -142,7 +145,14 @@ struct StudioView: View {
                 ProgressView().controlSize(.small)
                 Button("Cancel") { model.cancelConfirmation() }
             } else {
-                Button("Connect…") { model.prepareConnection() }.buttonStyle(.borderedProminent).tint(StudioTheme.green).foregroundStyle(.black)
+                VStack(alignment: .trailing, spacing: 5) {
+                    if model.canRecoverBluetooth {
+                        Button("Reconnect Bluetooth") { model.recoverBluetoothConnection() }.buttonStyle(.borderedProminent).tint(StudioTheme.green).foregroundStyle(.black)
+                        Text("Briefly disconnects EarStudio audio").font(.caption).foregroundStyle(StudioTheme.secondary)
+                    } else {
+                        Button("Connect…") { model.prepareConnection() }.buttonStyle(.borderedProminent).tint(StudioTheme.green).foregroundStyle(.black)
+                    }
+                }
             }
         }.padding(16).background(StudioTheme.card, in: RoundedRectangle(cornerRadius: 12)).padding(.horizontal, 28).padding(.bottom, 16)
     }
@@ -151,13 +161,16 @@ struct StudioView: View {
             Rectangle().fill(StudioTheme.border).frame(height: 1)
             HStack(spacing: 18) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("OUTPUT VOLUME").sectionCaption()
+                    HStack(spacing: 7) {
+                        Text("ANALOG VOLUME").sectionCaption()
+                        InfoButton(topic: .volume, compact: true)
+                    }
                     Text(model.canEdit ? model.state.outputName : "No device connected").font(.system(size: 10)).foregroundStyle(StudioTheme.secondary)
                 }.frame(width: 160, alignment: .leading)
                 Button { model.boolBinding(\.muted, .mute).wrappedValue.toggle() } label: {
                     Image(systemName: model.state.muted ? "speaker.slash.fill" : "speaker.wave.2.fill").font(.system(size: 17)).foregroundStyle(model.state.muted ? StudioTheme.green : StudioTheme.secondary)
-                }.buttonStyle(.plain).help(model.state.muted ? "Unmute" : "Mute").accessibilityLabel(model.state.muted ? "Unmute" : "Mute")
-                Slider(value: model.doubleBinding(\.volume, .volume, range: -60...6).quantized(0.5), in: -60...6).controlSize(.small).accessibilityLabel("Output volume")
+                }.buttonStyle(.plain).help(model.state.muted ? "Unmute" : "Mute").accessibilityLabel(model.state.muted ? "Unmute" : "Mute").disabled(!model.available(.audio, .mute))
+                Slider(value: model.doubleBinding(\.volume, .volume, range: -60...6).quantized(0.5), in: -60...6).controlSize(.small).accessibilityLabel("Analog volume").disabled(!model.available(.audio, .volume))
                 Text(model.canEdit ? String(format: "%.1f", model.state.volume) : "—").font(.system(size: 23, weight: .light, design: .rounded)).monospacedDigit()
                     .frame(width: 63, alignment: .trailing)
                 Text("dB").font(.system(size: 11)).foregroundStyle(StudioTheme.secondary)
@@ -167,7 +180,7 @@ struct StudioView: View {
                         .font(.system(size: 8, weight: .medium)).tracking(0.8).foregroundStyle(StudioTheme.secondary)
                     Text(model.canEdit ? model.state.inputName : "ES100 / MK2").font(.system(size: 10))
                 }.frame(width: 92, alignment: .trailing)
-            }.padding(.horizontal, 28).padding(.vertical, 20).disabled(!model.available(.audio))
+            }.padding(.horizontal, 28).padding(.vertical, 20)
         }.background(StudioTheme.sidebar)
     }
 }

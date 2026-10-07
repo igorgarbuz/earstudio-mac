@@ -75,10 +75,16 @@ enum Wire {
         return UInt8(bitPattern: Int8(floor(safe * 10 + 0.5)))
     }
     static func readGain(_ byte: UInt8) -> Double { Double(Int8(bitPattern: byte)) / 10 }
+
+    /// 0x0143 uses Android seekbar IDs 1...10, while our arrays use 0...9.
+    static func bandGain(at index: Int, gain value: Double) -> [UInt8] {
+        precondition((0..<10).contains(index))
+        return [UInt8(index + 1), gain(value)]
+    }
 }
 
-enum DeviceCommand: UInt16 {
-    case deviceInfo = 0x0001, state = 0x0010, eq = 0x0050, battery = 0x0070
+enum DeviceCommand: UInt16, CaseIterable {
+    case deviceDetails = 0x0000, deviceInfo = 0x0001, state = 0x0010, eq = 0x0050, battery = 0x0070
     case dct = 0x0102
     case volume = 0x0110, mute = 0x0111, toneVolume = 0x0112, callMute = 0x0113
     case trim = 0x0114, volumeLimit = 0x0115
@@ -96,7 +102,7 @@ enum DeviceCommand: UInt16 {
     func packet(_ payload: [UInt8] = []) -> GAIAPacket {
         GAIAPacket(command: rawValue, payload: payload)
     }
-    var isRead: Bool { [.deviceInfo, .state, .eq, .battery].contains(self) }
+    var isRead: Bool { [.deviceDetails, .deviceInfo, .state, .eq, .battery].contains(self) }
     func supported(by state: DeviceState) -> Bool {
         // Minimum versions explicitly checked by the Android controls.
         switch self {
@@ -107,16 +113,95 @@ enum DeviceCommand: UInt16 {
         case .led: return state.firmwareAtLeast(1, 2, 2)
         case .buffer: return state.firmwareAtLeast(1, 2, 1)
         case .toneVolume: return state.firmwareAtLeast(1, 1, 3)
+        case .oversampling, .ambientShortcut: return state.firmwareAtLeast(1, 1, 4)
+        case .codecs: return state.firmwareAtLeast(1, 1, 8)
+        case .dct, .crossfeed, .loopback: return state.firmwareAtLeast(1, 2, 0)
+        case .autoPower: return state.firmwareAtLeast(1, 3, 0)
         default: return true
         }
     }
     var refresh: DeviceCommand? {
         switch self {
+        case .toneVolume, .crossfeed, .autoPower, .codecs, .loopback: return .deviceDetails
         case .eqEnabled, .preamp, .band, .allGains, .headroom, .q: return .eq
         case .trim, .volumeLimit, .buffer, .led, .usbBits, .hfp, .batteryCare, .reconnect: return .deviceInfo
-        case .authenticate, .cancelAuthentication, .deviceInfo, .state, .eq, .battery, .batteryInterval: return nil
+        case .authenticate, .cancelAuthentication, .deviceDetails, .deviceInfo, .state, .eq, .battery, .batteryInterval: return nil
         default: return .state
         }
+    }
+
+    /// A successful write ACK is optional. All exposed settings are confirmed
+    /// against the packet containing that field, before the next write is sent.
+    var confirmationReadback: DeviceCommand? { refresh }
+
+    var stateGroup: StateGroup? {
+        switch isRead ? self : confirmationReadback {
+        case .deviceDetails: return .device
+        case .deviceInfo: return .info
+        case .state: return .audio
+        case .eq: return .eq
+        case .battery: return .battery
+        default: return nil
+        }
+    }
+
+    func hasReadbackFields(in packet: GAIAPacket) -> Bool {
+        switch self {
+        case .toneVolume: return packet.payload.count >= 11
+        case .codecs: return packet.payload.count >= 13
+        case .crossfeed, .autoPower: return packet.payload.count >= 14
+        case .loopback: return packet.payload.count >= 16
+        default: return true // DeviceState validates the other versioned layouts.
+        }
+    }
+
+    func matchesReadback(_ payload: [UInt8], state: DeviceState) -> Bool {
+        let actual: [UInt8]
+        switch self {
+        case .volume: actual = Wire.volume(state.volume)
+        case .mute: actual = [state.muted ? 1 : 0]
+        case .toneVolume: actual = Wire.volume(state.toneVolume)
+        case .callMute: actual = [state.callMuted ? 1 : 0]
+        case .trim: actual = Wire.volume(state.leftTrim) + Wire.volume(state.rightTrim)
+        case .volumeLimit: actual = Wire.volume(state.volumeLimit)
+        case .crossfeed: actual = [UInt8(clamping: state.crossfeed)]
+        case .dct: actual = [UInt8(clamping: state.dct)]
+        case .oversampling: actual = [UInt8(clamping: state.oversampling)]
+        case .dacFilter: actual = [UInt8(clamping: state.dacFilter)]
+        case .jitter: actual = [(state.jitterUSB ? 1 : 0) | (state.jitterBluetooth ? 2 : 0)]
+        case .eqEnabled: actual = [state.eqEnabled ? 1 : 0]
+        case .preamp: actual = [Wire.gain(state.preamp)]
+        case .band:
+            guard payload.count == 2 else { return false }
+            let index = Int(payload[0]) - 1
+            guard state.bands.indices.contains(index) else { return false }
+            actual = Wire.bandGain(at: index, gain: state.bands[index])
+        case .allGains: actual = ([state.preamp] + state.bands).map(Wire.gain)
+        case .headroom: actual = [UInt8(state.headroom | (state.analogCompensation ? 16 : 0))]
+        case .q: actual = Wire.u16(UInt16(state.q))
+        case .charger: actual = [state.chargerEnabled ? 1 : 0]
+        case .autoPower: actual = [UInt8(clamping: state.autoPower)]
+        case .batteryCare: actual = [state.batteryCare ? 1 : 0]
+        case .reconnect: actual = [state.reconnect ? 1 : 0]
+        case .outputMode:
+            let single = state.outputMode < 2, high = state.outputMode % 2 == 1
+            actual = [(single ? 1 : 0) | (high ? (single ? 64 : 32) : 0)]
+        case .outputLock: actual = [state.outputLocked ? 1 : 0]
+        case .codecs: actual = [UInt8(1 | (state.aac ? 2 : 0) | (state.aptx ? 4 : 0) | (state.aptxHD ? 8 : 0))]
+        case .buffer: actual = [UInt8(clamping: state.buffer)]
+        case .mic: actual = [UInt8(clamping: state.micGain) | (state.micPreamp ? 128 : 0)]
+        case .loopback: actual = Wire.volume(state.loopback)
+        case .hfp: actual = [UInt8(clamping: state.hfp)]
+        case .ambient: actual = [state.ambient ? 1 : 0]
+        // Write preamp bit 7 becomes readback bit 6 in the ambient state byte.
+        case .ambientMic: actual = [UInt8(clamping: state.ambientGain) | (state.ambientPreamp ? 128 : 0)]
+        case .ambientRatio: actual = [UInt8(clamping: state.ambientRatio)]
+        case .ambientShortcut: actual = [state.ambientShortcut ? 1 : 0]
+        case .led: actual = [UInt8(clamping: state.led)]
+        case .usbBits: actual = [UInt8(clamping: state.usbBits)]
+        default: return false
+        }
+        return payload == actual
     }
 }
 
@@ -131,6 +216,7 @@ struct CommandQueue {
     }
     private(set) var pending: [Item] = []
     private(set) var inFlight: Item?
+    private(set) var inFlightReadback: DeviceCommand?
 
     mutating func enqueue(_ item: Item) {
         if let key = item.key, let index = pending.firstIndex(where: { $0.key == key }) {
@@ -142,10 +228,23 @@ struct CommandQueue {
         inFlight = pending.removeFirst()
         return inFlight
     }
-    mutating func acknowledge(_ id: UInt16) -> Item? {
-        guard inFlight?.command.rawValue == id else { return nil }
-        defer { inFlight = nil }
-        return inFlight
+    mutating func beginReadback(for token: UUID) -> DeviceCommand? {
+        guard let item = inFlight, item.token == token, inFlightReadback == nil,
+              let query = item.command.confirmationReadback else { return nil }
+        inFlightReadback = query
+        return query
     }
-    mutating func reset() { pending.removeAll(); inFlight = nil }
+    mutating func acknowledge(_ packet: GAIAPacket) -> Item? {
+        guard let item = inFlight, packet.vendor == GAIAPacket.earStudioVendor,
+              packet.isAcknowledgement, let status = packet.status else { return nil }
+        if packet.id == item.command.rawValue {
+            // A successful write ACK is optional; still wait for actual settings.
+            guard status != 0 || item.command.confirmationReadback == nil else { return nil }
+        } else {
+            guard packet.id == inFlightReadback?.rawValue else { return nil }
+        }
+        inFlight = nil; inFlightReadback = nil
+        return item
+    }
+    mutating func reset() { pending.removeAll(); inFlight = nil; inFlightReadback = nil }
 }

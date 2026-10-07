@@ -1,6 +1,6 @@
 # EarStudio ES100 control protocol
 
-This is the maintained interoperability description recovered from EarStudio Android **1.9.0 / version code 35**, with the Mac command/decoder baseline at commit `012a059`. It is not a vendor specification. [Provenance.md](Provenance.md) pins the original evidence and distinguishes static recovery from a reported firmware 2.0.2 hardware test and concurrent implementation work.
+This is the maintained interoperability description recovered from EarStudio Android **1.9.0 / version code 35**, and maintained for Companion 1.0.6. It is not a vendor specification. [Provenance.md](Provenance.md) pins the original evidence and distinguishes static recovery, constructed tests and firmware 2.0.2 hardware observations.
 
 ## Confidence and notation
 
@@ -49,7 +49,7 @@ The command high bit `0x8000` marks a device reply/notification; the base ID is 
 4. `0x0304`, or a failed `0x0300` acknowledgement, ends the attempt.
 5. Empty command `0x0301` **cancels authentication**. It is not an authentication-status query.
 
-Refresh queries are `0x0001`, `0x0010`, `0x0070`, `0x0050`, serialized. Editing becomes available after information, audio state and EQ have loaded. The Mac also decodes ID `0x0000` for firmware/device information but does not explicitly query it in refresh. Its startup delivery/order remains important to check because firmware gates depend on it.
+Since 1.0.5, refresh queries are `0x0000`, `0x0001`, `0x0010`, `0x0070`, `0x0050`, serialized. Firmware loads first to establish the versioned information/EQ layouts. Editing becomes available after firmware, information, audio state and EQ have loaded. Full device controls additionally require their complete device-information fields. Explicit `0x0000` query/readback was observed on ES100 firmware 2.0.2 on 2026-10-07; other versions still require hardware validation.
 
 I timeouts: 20 seconds for opening/service discovery, 180 for authentication, 25 for initial synchronization, 4 for a queued transaction. Initial confirmation, key reuse, rejection sequences and firmware information delivery need further recorded validation. Never archive actual keys; fixture key `0x1234` is synthetic.
 
@@ -67,6 +67,7 @@ Ranges/labels below describe the exposed Mac choices, not every value firmware m
 
 | ID | Mac case | Host payload / exposed choices |
 | --- | --- | --- |
+| `0x0000` | `deviceDetails` | Empty; full information, firmware, codec enables, tones, auto power, crossfeed, loopback |
 | `0x0001` | `deviceInfo` | Empty; information part 2 |
 | `0x0010` | `state` | Empty; packed audio/device state |
 | `0x0050` | `eq` | Empty; active graphic EQ |
@@ -85,7 +86,7 @@ Ranges/labels below describe the exposed Mac choices, not every value firmware m
 | `0x0130` | `batteryInterval` | `u16` interval; enum/encoder available but not sent by current UI; units not established here |
 | `0x0141` | `eqEnabled` | Boolean |
 | `0x0142` | `preamp` | One `s8` EQ gain |
-| `0x0143` | `band` | Zero-based `u8` index 0-9, then `s8` gain |
+| `0x0143` | `band` | One-based `u8` band number 1-10 (UI array index + 1), then `s8` gain |
 | `0x0144` | `allGains` | Eleven `s8` values: preamp, then bands 0-9 |
 | `0x0145` | `headroom` | `u8`: low nibble 1 = -6 dB, 2 = -12 dB; bit 4 analog compensation |
 | `0x0146` | `q` | `u16` 2896 or 5791 |
@@ -117,7 +118,7 @@ All accepted layouts require vendor `0xA55A`, the high reply bit and status zero
 
 ### Information ID `0x0000`
 
-Minimum 11 bytes. Firmware major/minor/patch are `b[6..8]`; tone volume is `s16` at 9. At 13 bytes, codec enables are in `b[12]` bits 1/2/3. At 16 bytes, `b[13]` has low-nibble crossfeed and auto-power bits 7/6; loopback is `s16` at 14. Other fields are not decoded by the Mac.
+Minimum 11 bytes. Firmware major/minor/patch are `b[6..8]`; tone volume is `s16` at 9. At 13 bytes, codec enables are in `b[12]` bits 1/2/3. At 16 bytes, `b[13]` has low-nibble crossfeed and auto-power bits 7/6; loopback is `s16` at 14. Other fields are not decoded by the Mac. Short packets can establish firmware/tone volume, but only a 16-byte packet marks the full device group loaded. Individual write confirmations also check that their required fields are present.
 
 ### Information part 2, `0x0001`
 
@@ -130,7 +131,7 @@ Minimum 11 bytes. Firmware major/minor/patch are `b[6..8]`; tone volume is `s16`
 | 8 | `s16` volume limit |
 | 10 | Firmware 1.4.3+: bits 1-2 USB format; bit 0 not decoded by Mac |
 
-Minimum lengths are 3 bytes initially, 4 at firmware 1.2.4, 8 at 1.3.1, 10 at 1.4.0, 11 at 1.4.3. Optional present fields are also decoded when a shorter minimum applies. Unknown firmware does not establish which version layout is correct.
+Minimum lengths are 3 bytes initially, 4 at firmware 1.2.4, 8 at 1.3.1, 10 at 1.4.0, 11 at 1.4.3. Fields are decoded using firmware gates, even if padding extends an older packet. Unknown firmware prevents this packet and EQ from loading; initialization must read firmware first.
 
 ### Audio/device state, `0x0010`
 
@@ -154,6 +155,8 @@ Mac labels map input 0-3 to idle/USB/Bluetooth 1/Bluetooth 2; codec 0-4 to SBC/A
 ### EQ `0x0050` and battery `0x0070`
 
 EQ: `b[1]` enable, `b[2]` signed preamp, `b[3..12]` ten signed gains. At 1.4.0+, `b[13]` is headroom/analog compensation. At 1.4.3+, `b[14..15]` is raw Q. Minimum lengths are 13, 14 and 16 bytes respectively. No arbitrary center-frequency or per-band-Q field has been identified.
+
+**Single-band numbering correction (2026-10-07):** Android `com_radsone_earstudio_b_c.java` constructs seekbar IDs 0 for preamp and 1-10 for the frequency bands. In `com_radsone_earstudio_b_c$6.java` (and its paired disassembly), the local DSP gets `ID - 1`, but the device command gets `ID` unchanged through `com_radsone_earstudio_c_a.a(int,float)` and the command manager's `0x0143` encoder. Thus 4 kHz uses wire number 8 and reads back at `b[10]` (UI array index 7). The initial Mac implementation and earlier version of this table incorrectly described the device number as zero-based. Version 1.0.3 corrects writes and confirmation matching. Full-array writes/readback remain preamp followed by ten frequency-ordered gains; they do not carry band IDs.
 
 Battery: minimum four bytes, `[status, percent, millivolts_hi, millivolts_lo]`. ID `0x0200` has the same decoded layout. The Mac caps percent at 100.
 
@@ -186,6 +189,10 @@ Android dispatches additional IDs. Their existence alone does not identify safe 
 | Explicit Mac gate | Minimum firmware |
 | --- | --- |
 | Tone volume | 1.1.3 |
+| Oversampling, ambient shortcut | 1.1.4 |
+| Codec enables | 1.1.8 |
+| DCT, crossfeed, microphone loopback | 1.2.0 |
+| Auto power mode | 1.3.0 |
 | Buffer | 1.2.1 |
 | LED | 1.2.2 |
 | Battery care | 1.2.4 |
@@ -193,7 +200,7 @@ Android dispatches additional IDs. Their existence alone does not identify safe 
 | Headroom, volume limit, reconnect, HFP, USB-format command | 1.4.0 |
 | Q; three-choice USB-format UI | 1.4.3 |
 
-These are the recovered/current source gates; unknown firmware disables them. Absence of a gate on other commands does not establish compatibility with every older version. The archived 2018 manual additionally specifies 1.1.4 for oversampling/ambient shortcut and 1.2.0 for crossfeed/microphone loopback. Those extra minimums are not currently encoded by the Mac; this discrepancy remains a compatibility task. USB-format and HFP changes are presented as needing restart; the app does not reboot ES100.
+These are the recovered/current source gates; unknown firmware disables them. Absence of a gate on other commands does not establish compatibility with every older version. The 1.0.5 audit added missing gates from Android controls and the archived 2018 manual, including oversampling, ambient shortcut, crossfeed and loopback. The USB command uses the binary format from 1.4.0–1.4.2; the three-choice format uses 1.4.3+. The legacy UI exposure follows the decoded legacy field; it is covered by fixtures and still needs hardware validation on those versions. USB-format and HFP changes are presented as needing restart; the app does not reboot ES100.
 
 ## EQ and preset storage
 
@@ -201,15 +208,19 @@ The interface exposes a **10-band graphic EQ**, at 31.5, 63, 125, 250, 500, 1,00
 
 Readback supplies active EQ. Four inactive Android saved slots are phone-local SharedPreferences strings `radsone_eq_pre1` through `radsone_eq_pre4`, each eleven comma-separated gains (preamp, then ten bands); names are `Preset_name_1` through `Preset_name_4`. Q/headroom are absent. The Mac importer uses narrow Q 5791, headroom mode 1 and analog compensation enabled as I defaults. JSON format `earstudio-companion`, version 1, preserves these fields. Import changes the local library; selecting a preset sends commands.
 
-The curve is a peaking-filter estimate, not measured firmware DSP output, and excludes headroom/analog compensation. Cross-reboot settings persistence remains unverified by this archive task.
+The curve is a peaking-filter estimate, not measured firmware DSP output, and excludes headroom/analog compensation. Cross-reboot settings persistence remains unverified by the recorded hardware observations.
 
 ## Write confirmation: firmware requirement versus app policy
 
-**Reported firmware 2.0.2 behavior:** the concurrent workspace README says EQ writes can take effect without a write acknowledgement. A missing write ACK therefore cannot establish that EQ remained unchanged. Verification should explicitly query `0x0050` and compare the returned wire values to the requested change.
+**Reported firmware 2.0.2 behavior:** an initial hardware report observed EQ writes taking effect without a write acknowledgement. A missing write ACK therefore cannot establish that EQ remained unchanged. Verification should explicitly query `0x0050` and compare the returned wire values to the requested change.
 
 **Committed source baseline `012a059` (I):** one command is in flight, unsent slider edits coalesce by control/band after 150 ms, and successful setting ACKs schedule readback. Rejections/timeouts clear pending edits and restore last confirmed UI state; they do not prove that an unacknowledged write failed on the device. There are no automatic write retries. Battery is queried every 30 seconds while connected and idle; diagnostics omit keys and payload contents.
 
-**Concurrent local implementation (not part of this documentation commit):** EQ writes retain their transaction while a `0x0050` query is sent after a 150 ms settling interval, even without a write ACK. Returned EQ must match the requested values before the transaction completes, and later edits wait for that confirmation. This policy is visible in working-tree `confirmationReadback`, `matchesEQReadback` and queue changes. It should be documented against its own source commit when those changes are committed. Other acknowledged settings still schedule ordinary readback.
+**EQ confirmation policy in 1.0.3:** EQ writes retain their transaction while a `0x0050` query is sent after a 150 ms settling interval, even without a write ACK. Returned EQ must match the requested values before the transaction completes, and later edits wait for that confirmation. Single-band matching subtracts 1 from the wire band number before indexing the readback array. Pending edits remain overlaid on confirmed state so an earlier readback does not undo a later drag. Other acknowledged settings still schedule ordinary readback.
+
+**Volume confirmation policy in 1.0.4:** A user reported an applied `0x0110` volume write followed by the app's missing-ACK warning. Volume now uses the same serialized confirmation path with query `0x0010` after 150 ms. `0x8110` success is optional; an explicit error still fails the write. The returned system volume at `b[7..8]` must encode to the same signed 1/256 dB value as the requested payload. Notifications `0x0230`/`0x0220` update state but do not complete a pending query. Rejected or incomplete state queries and mismatched values remain errors; there are no automatic write retries. This policy is supported by constructed tests and the user report, not an archived raw-device capture.
+
+Validation on 2026-10-07: version 1.0.4 passed 21 core tests and all 36 native Xcode tests. Added volume cases cover omitted/optional ACKs, signed wire matching, serialized volume/EQ edits, unsolicited notifications, ignored writes, rejected state queries and truncated replies. Physical validation of the new build remains pending.
 
 ## Fixtures and further validation
 
@@ -222,10 +233,19 @@ FF 01 00 02 A5 5A 03 00 12 34
 Set volume -32.5 dB:
 FF 01 00 02 A5 5A 01 10 DF 80
 
-Set zero-based band 3 to -1.2 dB:
-FF 01 00 02 A5 5A 01 43 03 F4
+Set 250 Hz (UI index 3, device band 4) to -1.2 dB:
+FF 01 00 02 A5 5A 01 43 04 F4
+
+Set 4 kHz (UI index 7, device band 8) to +2.1 dB:
+FF 01 00 02 A5 5A 01 43 08 15
 ```
 
-The source baseline has twelve protocol/preset tests covering fixtures, stream boundaries, corruption, signed units, packed state, truncation, firmware gates, queue coalescing, presets and microphone mapping. Concurrent local tests add EQ readback confirmation cases. Those constructed fixtures are not archived device captures; this documentation task did not rerun or certify the concurrent code changes.
+The historical source baseline had twelve protocol/preset tests. Version 1.0.3 passed 19 core tests and 29 native Xcode tests on 2026-10-07, covering protocol fixtures, stream boundaries, corruption, signed units, packed state, truncation, firmware gates, queue coalescing, presets, microphone mapping, connection lifecycle and EQ synchronization. The native EQ tests drive all ten slider bindings against a simulated device, check untouched neighbors, and preserve rapid edits across earlier readbacks without write ACKs. These constructed fixtures are not archived device captures. Small 4 kHz/8 kHz drags were also checked in demo mode; the corrected band mapping still needs physical ES100 validation.
 
 Further recorded validation should cover service/channel selection, initial firmware information, first/subsequent authentication, status/layout variants, small downward volume/mute/EQ changes with readback, reconnect, persistence through restart and firmware versions across ES100/MK2. Firmware flashing, factory reset, renaming and iOS transport remain outside the implemented interface.
+
+## All-control audit in 1.0.5
+
+All 34 exposed writable commands now retain their transaction through an explicit readback, with optional successful write ACKs and no automatic write retries. Queries are selected by the field's actual location: `0x0000` for tones/crossfeed/auto power/codec enables/loopback, `0x0001` for extended options, `0x0010` for audio/ambient/microphone/output controls, and `0x0050` for EQ. Every field compares the actual wire representation, including the different ambient preamp write/read bits. Rejected read queries disable only dependent controls. See [ControlAudit.md](ControlAudit.md) for the complete mapping and validation scope.
+
+Hardware on 2026-10-07 reproduced a successful SDP query followed by an RFCOMM open with no completion. Disconnecting/reconnecting the macOS EarStudio link restored authentication and all five settings queries on firmware 2.0.2. Channel selection changed from 1 to 14; a subsequent relaunch also stalled on channel 14, so a stale channel number alone does not explain the issue. The app requests service-specific SDP, handles existing open channels, prevents concurrent Companion ownership, ignores duplicate discovery, closes late opens after cancellation, and retains async write storage through completion. Graceful RFCOMM close cannot guarantee that the OS/device session resets. The explicit **Reconnect Bluetooth** recovery action closes the device baseband link off the main thread, then reopens control; its UI states that Bluetooth audio briefly disconnects. Pairing and device keys are retained.

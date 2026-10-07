@@ -85,7 +85,7 @@ def configurations(key, file_for_mode):
 
 def make_project():
     groups = [folder_group(ROOT / name) for name in ("Sources", "Tests", "Resources", "Configuration", "Tools")]
-    documents = [file_reference(ROOT / name) for name in ("README.md", "Package.swift")]
+    documents = [file_reference(ROOT / name) for name in ("README.md", "LICENSE", "Package.swift")]
     app_product = add("app-product", isa="PBXFileReference", explicitFileType="wrapper.application",
                       path="EarStudio Companion.app", sourceTree="BUILT_PRODUCTS_DIR")
     test_product = add("test-product", isa="PBXFileReference", explicitFileType="wrapper.cfbundle",
@@ -99,7 +99,7 @@ def make_project():
     test_files = sorted(p for p in FILE_REFS if p.startswith("Tests/") and p.endswith(".swift"))
     app_phases = [phase("app-sources", "PBXSourcesBuildPhase", source_files),
                   phase("app-frameworks", "PBXFrameworksBuildPhase", []),
-                  phase("app-resources", "PBXResourcesBuildPhase", ["Resources/Assets.xcassets"])]
+                  phase("app-resources", "PBXResourcesBuildPhase", ["Resources/Assets.xcassets", "LICENSE"])]
     test_phases = [phase("test-sources", "PBXSourcesBuildPhase", test_files),
                    phase("test-frameworks", "PBXFrameworksBuildPhase", []),
                    phase("test-resources", "PBXResourcesBuildPhase", [])]

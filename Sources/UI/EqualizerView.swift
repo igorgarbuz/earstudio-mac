@@ -14,9 +14,9 @@ struct EqualizerView: View {
                     }
                     Spacer()
                     Menu {
-                        Button("Flat") { model.applyPreset(.flat) }.disabled(!model.available(.eq))
+                        Button("Flat") { model.applyPreset(.flat) }.disabled(!model.available(.eq, .allGains))
                         ForEach(model.presets) { preset in
-                            Button(preset.name) { model.applyPreset(preset) }.disabled(!model.available(.eq))
+                            Button(preset.name) { model.applyPreset(preset) }.disabled(!model.available(.eq, .allGains))
                         }
                         Divider()
                         Button("Save current as preset…") { newName = ""; saving = true }.disabled(!model.available(.eq))
@@ -45,7 +45,7 @@ struct EqualizerView: View {
                 HStack {
                     Text("±12 dB").font(.system(size: 9)).foregroundStyle(StudioTheme.secondary)
                     Spacer()
-                    Button("Reset to flat") { model.applyPreset(.flat) }.buttonStyle(.plain).font(.system(size: 10)).foregroundStyle(StudioTheme.secondary).disabled(!model.available(.eq))
+                    Button("Reset to flat") { model.applyPreset(.flat) }.buttonStyle(.plain).font(.system(size: 10)).foregroundStyle(StudioTheme.secondary).disabled(!model.available(.eq, .allGains))
                 }
             }
             HStack(alignment: .top, spacing: 18) {
@@ -63,6 +63,7 @@ struct EqualizerView: View {
                 }
             }
             Panel(title: "Headroom", subtitle: "Reserve digital headroom for EQ boosts. Available on firmware 1.4.0 and later.") {
+                InfoButton(topic: .equalizer)
                 HStack(spacing: 35) {
                     Picker("Digital headroom", selection: Binding(get: { model.state.headroom }, set: { model.setHeadroom($0, compensation: model.state.analogCompensation) })) {
                         Text("−6 dB").tag(1); Text("−12 dB").tag(2)
@@ -73,7 +74,7 @@ struct EqualizerView: View {
         }
         .sheet(isPresented: $saving) {
             VStack(alignment: .leading, spacing: 20) {
-                Text("Save your sound").font(.title2.weight(.semibold))
+                Text("Save EQ preset").font(.title2.weight(.semibold))
                 Text("Save the ten bands, preamp, Q, and headroom settings together.").font(.callout).foregroundStyle(StudioTheme.secondary)
                 TextField("Preset name", text: $newName).textFieldStyle(.roundedBorder).onSubmit { save() }
                 HStack { Spacer(); Button("Cancel") { saving = false }.keyboardShortcut(.cancelAction); Button("Save preset") { save() }.keyboardShortcut(.defaultAction).disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
@@ -91,6 +92,7 @@ struct EQBand: View {
     @Binding var value: Double
     @Environment(\.isEnabled) private var enabled
     @FocusState private var focused: Bool
+    @State private var dragStartGain: Double?
     var body: some View {
         VStack(spacing: 9) {
             TextField("Gain at \(label) Hz", value: $value, format: .number.precision(.fractionLength(1)))
@@ -114,11 +116,7 @@ struct EQBand: View {
                         .offset(y: y - 5)
                 }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .contentShape(Rectangle())
-                    .gesture(DragGesture(minimumDistance: 0).onChanged { event in
-                        guard enabled else { return }
-                        focused = true
-                        value = (min(12, max(-12, 12 - (event.location.y - 8) / height * 24)) * 10).rounded() / 10
-                    })
+                    .gesture(gainDrag(in: proxy, trackHeight: height, thumbY: y))
                     .onTapGesture(count: 2) { if enabled { value = 0 } }
             }.frame(height: 132)
                 .focusable(enabled).focused($focused).focusEffectDisabled()
@@ -133,6 +131,25 @@ struct EQBand: View {
                 }
             Text(label).font(.system(size: 10, weight: .medium)).foregroundStyle(StudioTheme.secondary)
         }.frame(maxWidth: .infinity)
+    }
+
+    private func gainDrag(in geometry: GeometryProxy, trackHeight: CGFloat, thumbY: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .global).onChanged { event in
+            guard enabled else { return }
+            focused = true
+            let height = Double(trackHeight)
+            if dragStartGain == nil {
+                let startY = Double(event.startLocation.y - geometry.frame(in: .global).minY)
+                // Grabbing the thumb keeps its gain; clicking the track seeks.
+                dragStartGain = abs(startY - Double(thumbY)) <= 8 ? value : min(12, max(-12, 12 - (startY - 8) / height * 24))
+            }
+            // Readback or a message can move the track during a drag. Using
+            // screen-space translation from the initial gain prevents a
+            // layout/value update from jumping the thumb to an endpoint.
+            guard let startGain = dragStartGain else { return }
+            let gain = startGain - Double(event.translation.height) / height * 24
+            value = (min(12, max(-12, gain)) * 10).rounded() / 10
+        }.onEnded { _ in dragStartGain = nil }
     }
 }
 

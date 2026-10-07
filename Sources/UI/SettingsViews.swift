@@ -6,12 +6,12 @@ struct OverviewView: View {
         VStack(spacing: 18) {
             Panel(title: "") {
                 HStack(spacing: 30) {
-                    DeviceIllustration()
+                    DeviceImage()
                     VStack(alignment: .leading, spacing: 18) {
-                        Text("SMALL DEVICE. BIG SOUND.").sectionCaption()
+                        Text("ES100 / ES100 MK2").sectionCaption()
                         Text(model.deviceName).font(.system(size: 33, weight: .light)).tracking(-0.8)
-                        Text("A native home for your portable studio.").font(.system(size: 13)).foregroundStyle(StudioTheme.secondary)
-                        StatusPill(text: model.isDemo ? "EXPLORING DEMO" : model.phase.rawValue.uppercased(), color: model.isDemo ? .orange : StudioTheme.green)
+                        Text("Bluetooth and USB DAC / headphone amplifier.").font(.system(size: 13)).foregroundStyle(StudioTheme.secondary)
+                        StatusPill(text: model.isDemo ? "DEMO MODE" : model.phase.rawValue.uppercased(), color: model.phase.statusColor)
                         HStack(spacing: 12) {
                             if model.phase == .connected { Button("Refresh settings") { model.refresh() }; Button("Disconnect") { model.disconnect() } }
                             else { Button("Connect EarStudio…") { model.prepareConnection() }.buttonStyle(.borderedProminent) }
@@ -34,7 +34,7 @@ struct OverviewView: View {
                 Panel(title: "On the device", subtitle: "Active EQ and audio settings live on your ES100. After configuring it, you can close this app and keep listening from Bluetooth or USB.") {
                     Label("Hardware audio processing", systemImage: "cpu").font(.system(size: 12)).foregroundStyle(StudioTheme.green)
                 }
-                Panel(title: "In your library", subtitle: "Save as many EQ presets as you need. Import an Android preferences export or share presets between Macs as JSON.") {
+                Panel(title: "In your library", subtitle: "EQ presets are stored on this Mac. Import Android preferences XML or exchange presets as JSON.") {
                     Label("\(model.presets.count) saved presets", systemImage: "square.stack").font(.system(size: 12)).foregroundStyle(StudioTheme.green)
                 }
             }
@@ -47,6 +47,7 @@ struct SoundView: View {
     var body: some View {
         VStack(spacing: 18) {
             Panel(title: "Analog output", subtitle: "Choose the headphone connection and amplifier mode.") {
+                InfoButton(topic: .output)
                 HStack(spacing: 10) {
                     ForEach(0..<4) { mode in
                         Button { model.setOutput(mode) } label: {
@@ -65,6 +66,7 @@ struct SoundView: View {
             }
             HStack(alignment: .top, spacing: 18) {
                 Panel(title: "DAC filter", subtitle: "AK4375A reconstruction filter") {
+                    InfoButton(topic: .dac)
                     Picker("DAC filter", selection: model.intBinding(\.dacFilter, .dacFilter, range: 0...3)) {
                         Text("Sharp roll-off").tag(0); Text("Slow roll-off").tag(1)
                         Text("Short delay · sharp").tag(2); Text("Short delay · slow").tag(3)
@@ -77,11 +79,12 @@ struct SoundView: View {
                 }
             }
             Panel(title: "Sound processing") {
-                IntegerSlider(title: "Crossfeed", value: model.intBinding(\.crossfeed, .crossfeed, range: 0...10), range: 0...10).disabled(!model.available(.audio, .crossfeed))
+                InfoButton(topic: .processing)
+                IntegerSlider(title: "Crossfeed", value: model.intBinding(\.crossfeed, .crossfeed, range: 0...10), range: 0...10).disabled(!model.available(.device, .crossfeed))
                 Text("Blend a little of each channel into the other. 0 turns crossfeed off.").font(.caption).foregroundStyle(StudioTheme.secondary)
                 Divider().overlay(StudioTheme.border)
                 IntegerSlider(title: "DCT level", value: model.intBinding(\.dct, .dct, range: 0...10), range: 0...10).disabled(!model.available(.audio, .dct))
-                Text("Radsone’s built-in processing, using the same levels as the Android app.").font(.caption).foregroundStyle(StudioTheme.secondary)
+                Text("Optional DCT processing in the ES100 firmware. 0 turns it off.").font(.caption).foregroundStyle(StudioTheme.secondary)
             }
             Panel(title: "Channel trim") {
                 HStack(spacing: 35) {
@@ -106,6 +109,7 @@ struct InputView: View {
                 }
             }
             Panel(title: "Bluetooth codecs", subtitle: "Allow the source device to negotiate these codecs. Changes apply on the next audio connection.") {
+                InfoButton(topic: .input)
                 HStack(spacing: 30) {
                     codecToggle("AAC", path: \.aac)
                     codecToggle("aptX", path: \.aptx)
@@ -118,11 +122,11 @@ struct InputView: View {
                 Text("Pause Bluetooth playback before changing the buffer. The original app recommends 7 or above. LDAC uses a fixed buffer.").font(.caption).foregroundStyle(StudioTheme.secondary)
             }
             Panel(title: "USB DAC", subtitle: "Changes take effect after restarting the ES100.") {
-                Picker("USB format", selection: model.intBinding(\.usbBits, .usbBits, range: 0...2)) {
+                Picker("USB format", selection: model.intBinding(\.usbBits, .usbBits, range: 0...(model.state.supportsQ ? 2 : 1))) {
                     Text("48 kHz · 16-bit").tag(0)
                     Text("48 kHz · 24-bit (Mac)").tag(1)
-                    Text("44.1 / 48 kHz · 16-bit").tag(2)
-                }.disabled(!model.available(.info, .usbBits) || !model.state.supportsQ)
+                    if model.state.supportsQ { Text("44.1 / 48 kHz · 16-bit").tag(2) }
+                }.disabled(!model.available(.info, .usbBits))
                 Text("The ES100’s 24-bit mode requires a direct USB connection to a Mac, without a USB hub.").font(.caption).foregroundStyle(StudioTheme.secondary)
             }
             Panel(title: "Jitter processing") {
@@ -146,7 +150,7 @@ struct AmbientView: View {
     var body: some View {
         VStack(spacing: 18) {
             Panel(title: "Ambient mode", subtitle: "Bring sound from the ES100 microphone into your headphones.") {
-                SettingToggle(title: "Let the outside in", value: model.boolBinding(\.ambient, .ambient)).disabled(!model.available(.audio, .ambient))
+                SettingToggle(title: "Enable ambient mode", value: model.boolBinding(\.ambient, .ambient)).disabled(!model.available(.audio, .ambient))
                 Divider()
                 IntegerSlider(title: "Ambient mix", value: model.intBinding(\.ambientRatio, .ambientRatio, range: 0...100), range: 0...100, step: 5, unit: "%").disabled(!model.available(.audio, .ambientRatio))
                 HStack { Text("Music only"); Spacer(); Text("Ambient only") }.font(.caption).foregroundStyle(StudioTheme.secondary)
@@ -199,19 +203,19 @@ struct SystemView: View {
                     Metric(label: "Charging", value: model.canEdit ? (model.state.charging ? "Charging" : "Not charging") : "—")
                 }
                 Divider()
-                SettingToggle(title: "Battery care", detail: "Use the ES100’s battery-life protection mode.", value: model.boolBinding(\.batteryCare, .batteryCare)).disabled(!model.available(.info, .batteryCare))
+                SettingToggle(title: "Battery care", detail: "Limit charging to approximately 80–90%. Restart the ES100 after changing this setting.", value: model.boolBinding(\.batteryCare, .batteryCare)).disabled(!model.available(.info, .batteryCare))
                 SettingToggle(title: "USB charging", detail: "Turn off to run from the battery while connected by USB.", value: model.boolBinding(\.chargerEnabled, .charger)).disabled(!model.available(.audio, .charger))
                 Picker("Auto power", selection: model.intBinding(\.autoPower, .autoPower, range: 0...2)) {
                     Text("Normal").tag(0); Text("Off when charger connects").tag(1); Text("Off when USB power disconnects").tag(2)
                 }.disabled(!model.available(.device, .autoPower))
             }
-            Panel(title: "Everyday controls") {
+            Panel(title: "Device controls") {
                 SettingToggle(title: "Reconnect second device", detail: "Restore the second Bluetooth connection automatically.", value: model.boolBinding(\.reconnect, .reconnect)).disabled(!model.available(.info, .reconnect))
                 Picker("Status light", selection: model.intBinding(\.led, .led, range: 0...2)) {
                     Text("Color").tag(0); Text("White").tag(1); Text("Off").tag(2)
                 }.disabled(!model.available(.info, .led))
                 Divider()
-                ValueSlider(title: "Maximum volume", value: model.doubleBinding(\.volumeLimit, .volumeLimit, range: -60...6), range: -60...6).disabled(!model.available(.info, .volumeLimit))
+                ValueSlider(title: "Maximum analog volume", value: model.doubleBinding(\.volumeLimit, .volumeLimit, range: -60...6), range: -60...6).disabled(!model.available(.info, .volumeLimit))
                 ValueSlider(title: "Notification volume", value: model.doubleBinding(\.toneVolume, .toneVolume, range: -60...0), range: -60...0).disabled(!model.available(.device, .toneVolume))
             }
             Panel(title: "About this device") {
@@ -229,5 +233,120 @@ struct SystemView: View {
                 Text("An independent companion for ES100 and ES100 MK2. Firmware updates and factory reset are not implemented.").font(.caption).foregroundStyle(StudioTheme.secondary)
             }
         }
+    }
+}
+
+// Independently worded help, based on the recovered Android 1.9.0 resources.
+// Resource IDs and the product image's origin are recorded in Docs/Provenance.md.
+enum InfoTopic: String, CaseIterable, Identifiable {
+    case output = "Balanced and unbalanced output"
+    case volume = "Analog and source volume"
+    case equalizer = "EQ, preamp, and headroom"
+    case dac = "DAC filters and oversampling"
+    case processing = "Crossfeed and DCT"
+    case input = "Bluetooth, USB, and jitter"
+    case ambient = "Ambient sound and calls"
+    case power = "Battery and stored settings"
+    var id: String { rawValue }
+}
+
+struct InfoButton: View {
+    let topic: InfoTopic
+    var compact = false
+    @State private var showing = false
+    var body: some View {
+        Button { showing = true } label: {
+            if compact { Image(systemName: "info.circle") }
+            else { Label("About this setting", systemImage: "info.circle") }
+        }
+            .help(topic.rawValue)
+            .buttonStyle(.plain).font(.caption).foregroundStyle(StudioTheme.green)
+            .accessibilityLabel("About \(topic.rawValue)")
+            .sheet(isPresented: $showing) { InfoSheet(topic: topic) }
+    }
+}
+
+struct InfoSheet: View {
+    let topic: InfoTopic
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack {
+                Text(topic.rawValue).font(.title2.weight(.semibold))
+                Spacer()
+                Button("Done") { dismiss() }.keyboardShortcut(.cancelAction)
+            }
+            ScrollView { InfoContent(topic: topic).padding(.trailing, 8) }
+                .frame(maxHeight: 520)
+        }.padding(28).frame(width: 650).background(StudioTheme.background)
+    }
+}
+
+struct InfoView: View {
+    var body: some View {
+        VStack(spacing: 18) {
+            ForEach(InfoTopic.allCases) { topic in
+                Panel(title: topic.rawValue) { InfoContent(topic: topic) }
+            }
+        }.textSelection(.enabled)
+    }
+}
+
+struct InfoContent: View {
+    let topic: InfoTopic
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            switch topic {
+            case .output:
+                paragraph("The 3.5 mm single-ended output carries left and right signals with a shared ground: L, R, and GND. The 2.5 mm balanced output uses four separate connections: L+, L−, R+, and R−. Each headphone driver connects between its channel’s + and − outputs.")
+                paragraph("The ES100 uses two DAC/amplifier chips, one per channel. Balanced wiring removes the shared headphone ground connection. The connector alone does not establish sound quality; the amplifier circuit, headphone load, and listening level also matter.")
+                HStack(alignment: .top, spacing: 20) {
+                    modes(title: "3.5 mm · Unbalanced", lines: ["1× current: normal mode; approximately 1 Ω output impedance.", "2× current: parallel amplifier mode; approximately 0.5 Ω output impedance."])
+                    modes(title: "2.5 mm · Balanced", lines: ["1× voltage: normal voltage limit.", "2× voltage: higher voltage limit for high-impedance headphones."])
+                }
+                paragraph("2× current does not double the voltage. The original app describes 1× and 2× balanced voltage modes as differing in their voltage limit. Choose the mode for the connected headphones, then use output lock to keep it selected.")
+                caution("Use the 2.5 mm output only with a compatible balanced cable. Do not adapt it to 3.5 mm single-ended, AUX, or RCA: joining the negative outputs can damage the amplifier. The ES100 pin order from tip to sleeve is R−, R+, L+, L−. Check the cable wiring before connecting.")
+                caution("The original app reserves 2.5 mm / 2× voltage for headphones above 300 Ω and warns against low-impedance earphones. Lower analog volume before changing headphones or amplifier mode.")
+                paragraph("The original app allows balanced output when the 3.5 mm jack is empty; inserting a 3.5 mm plug selects the single-ended connection.")
+            case .volume:
+                paragraph("Analog volume controls the ES100’s programmable gain amplifier (PGA). Source volume changes the signal level sent by the phone or computer. These are separate controls; the companion’s bottom slider adjusts analog volume in dB, not the Mac’s system volume.")
+                paragraph("The Android app recommends a high source level and using analog volume for listening adjustments. Before raising the source level, lower analog volume, then increase it gradually to a comfortable level. This companion does not automatically change source volume on connection.")
+                paragraph("Maximum analog volume caps the device’s analog gain. Notification volume adjusts the ES100’s local tones relative to analog volume; it is separate from music volume.")
+            case .equalizer:
+                paragraph("The ES100 has ten fixed EQ center frequencies. Each band changes gain; Q sets how wide the adjustment is. Wide uses Q 0.7071, narrow uses Q 1.4142. This is a graphic EQ, rather than a parametric EQ with freely movable frequencies.")
+                paragraph("Boosting bands can push the digital signal beyond its available range and cause clipping. A lower preamp setting and −6 or −12 dB digital headroom leave space for those boosts. Several overlapping boosts may need more headroom than one band alone.")
+                paragraph("The optional +6 dB analog compensation raises gain after digital processing. It can offset part of the level reduction but cannot repair digital clipping. The response graph is an estimate and excludes this headroom and compensation.")
+            case .dac:
+                paragraph("The AK4375A DAC offers sharp and slow roll-off filters, with short-delay variants. These change the reconstruction filter’s frequency and time response. They do not change EQ band gains or the source codec.")
+                paragraph("Oversampling offers 1×, 2×, and 4× processing rates. It does not add detail missing from the source recording. The original app notes that a higher setting is not guaranteed to improve performance; compare settings at the same listening level.")
+            case .processing:
+                paragraph("Crossfeed mixes some of each channel into the other to approximate aspects of loudspeaker listening through headphones. It changes stereo separation. Level 0 disables it.")
+                paragraph("DCT (Distinctive Clear Technology) is optional Radsone processing implemented in the ES100 firmware. This open-source companion selects its level; it does not implement the DCT algorithm. Level 0 disables it. The original app’s claims about restored detail are not independently verified here.")
+            case .input:
+                paragraph("Bluetooth codec selection is negotiated with the source. Enabling AAC, aptX, or aptX HD permits negotiation; it does not force that codec. SBC stays available. LDAC is configured on the source. The Input page reports the format received by the ES100.")
+                paragraph("The Bluetooth buffer trades latency against tolerance of interruptions. Pause playback before changing it. The original app recommends level 7 or higher; LDAC uses a fixed buffer.")
+                paragraph("USB format changes require an ES100 restart. The original app specifies a direct Mac USB connection for 24-bit mode. Jitter processing is separately selectable for Bluetooth and USB; if periodic clicks occur, the original help suggests disabling it for that input.")
+            case .ambient:
+                paragraph("Ambient mode mixes the built-in microphone with streamed audio. The mix setting changes the music/microphone balance; microphone gain changes the captured level before the mix. Higher gain also raises background noise.")
+                paragraph("Call microphone loopback feeds the microphone into the headphone output so you can hear yourself. If using speakers, this can create acoustic feedback. Ambient and call microphone settings are separate.")
+            case .power:
+                paragraph("Battery care limits charging to approximately 80–90%, depending on conditions. The original app says this setting requires a restart. With USB charging disabled, the ES100 operates from its battery while connected to USB.")
+                paragraph("Active EQ and device settings are stored on the ES100 and apply to Bluetooth and USB audio after the app is closed. Named companion presets are a separate library stored on this Mac. Connecting reads the device’s current settings.")
+            }
+        }.frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled)
+    }
+    private func paragraph(_ text: String) -> some View {
+        Text(text).font(.system(size: 12)).foregroundStyle(StudioTheme.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+    private func caution(_ text: String) -> some View {
+        Label { Text(text).fixedSize(horizontal: false, vertical: true) } icon: { Image(systemName: "exclamationmark.triangle") }
+            .font(.system(size: 12)).foregroundStyle(.orange)
+    }
+    private func modes(title: String, lines: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title).font(.system(size: 12, weight: .semibold))
+            ForEach(lines, id: \.self) { paragraph($0) }
+        }.frame(maxWidth: .infinity, alignment: .leading)
     }
 }

@@ -82,9 +82,15 @@ struct IntegerSlider: View {
     }
 }
 
+extension ConnectionPhase {
+    var statusColor: Color {
+        self == .connected ? StudioTheme.green : .orange
+    }
+}
+
 struct StatusPill: View {
     let text: String
-    var color = StudioTheme.green
+    let color: Color
     var body: some View {
         HStack(spacing: 6) {
             Circle().fill(color).frame(width: 5, height: 5)
@@ -105,21 +111,38 @@ struct Metric: View {
     }
 }
 
-struct DeviceIllustration: View {
+struct DeviceImage: View {
     var body: some View {
+        // Original vector illustration, independent of manufacturer artwork.
         ZStack {
-            RoundedRectangle(cornerRadius: 23).fill(.black.opacity(0.4)).frame(width: 135, height: 210).blur(radius: 18).offset(y: 18)
-            RoundedRectangle(cornerRadius: 22).fill(LinearGradient(colors: [Color(white: 0.19), Color(white: 0.07)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                .overlay(RoundedRectangle(cornerRadius: 22).stroke(LinearGradient(colors: [.white.opacity(0.25), .white.opacity(0.04)], startPoint: .topLeading, endPoint: .bottomTrailing)))
-                .frame(width: 132, height: 206)
+            RoundedRectangle(cornerRadius: 23)
+                .fill(.linearGradient(colors: [Color(white: 0.37), Color(white: 0.13)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 127, height: 203).offset(x: 7, y: 3)
+            RoundedRectangle(cornerRadius: 21)
+                .fill(.linearGradient(colors: [Color(white: 0.17), Color(white: 0.055)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .overlay(RoundedRectangle(cornerRadius: 21).stroke(.white.opacity(0.18), lineWidth: 1))
+                .frame(width: 124, height: 201)
             VStack(spacing: 0) {
-                RoundedRectangle(cornerRadius: 5).fill(.black.opacity(0.65)).frame(width: 46, height: 9).padding(.top, 17)
+                HStack(spacing: 19) {
+                    Circle().fill(.black).overlay(Circle().stroke(.white.opacity(0.28), lineWidth: 2)).frame(width: 16, height: 16)
+                    Circle().fill(.black).overlay(Circle().stroke(.white.opacity(0.28), lineWidth: 2)).frame(width: 12, height: 12)
+                }.padding(.top, 10)
                 Spacer()
-                Circle().fill(StudioTheme.green).frame(width: 5, height: 5).shadow(color: StudioTheme.green.opacity(0.7), radius: 8).padding(.bottom, 17)
-                Text("earstudio").font(.system(size: 17, weight: .light)).tracking(0.7).foregroundStyle(.white.opacity(0.8))
-                Text("ES100").font(.system(size: 8, weight: .medium)).tracking(3).foregroundStyle(.white.opacity(0.3)).padding(.top, 7).padding(.bottom, 33)
-            }.frame(width: 132, height: 206)
-        }.frame(width: 190, height: 235).rotationEffect(.degrees(-8)).accessibilityHidden(true)
+                Circle().stroke(StudioTheme.green.opacity(0.8), lineWidth: 2)
+                    .background(Circle().fill(.white.opacity(0.025)))
+                    .frame(width: 39, height: 39)
+                Spacer()
+                Text("ES100").font(.system(size: 14, weight: .medium, design: .rounded)).tracking(2)
+                    .foregroundStyle(.white.opacity(0.75))
+                Text("USB · BLUETOOTH").font(.system(size: 5, weight: .medium)).tracking(1)
+                    .foregroundStyle(.white.opacity(0.35)).padding(.top, 6).padding(.bottom, 22)
+            }.frame(width: 124, height: 201)
+        }
+        .rotationEffect(.degrees(-8))
+        .shadow(color: .black.opacity(0.4), radius: 12, x: 6, y: 12)
+        .frame(width: 190, height: 235)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Illustration of an EarStudio ES100")
     }
 }
 
