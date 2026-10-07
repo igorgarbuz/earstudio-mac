@@ -1,0 +1,7 @@
+PRODUCT_NAME = EarStudioCompanionTests
+PRODUCT_BUNDLE_IDENTIFIER = com.igor.earstudio-companion.tests
+GENERATE_INFOPLIST_FILE = YES
+TEST_HOST = $(BUILT_PRODUCTS_DIR)/EarStudio Companion.app/Contents/MacOS/EarStudio Companion
+BUNDLE_LOADER = $(TEST_HOST)
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/../Frameworks @loader_path/../Frameworks
+SKIP_INSTALL = YES

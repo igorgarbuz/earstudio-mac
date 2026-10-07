@@ -1,0 +1,16 @@
+// Shared platform and compiler settings. No account or certificate needed locally.
+SDKROOT = macosx
+SUPPORTED_PLATFORMS = macosx
+MACOSX_DEPLOYMENT_TARGET = 14.0
+SWIFT_VERSION = 5.0
+SWIFT_STRICT_CONCURRENCY = targeted
+CLANG_ENABLE_MODULES = YES
+CLANG_ENABLE_OBJC_ARC = YES
+GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR
+CLANG_WARN_UNREACHABLE_CODE = YES
+ENABLE_HARDENED_RUNTIME = YES
+
+// This local Bluetooth Classic controller is not configured for the App Store.
+ENABLE_APP_SANDBOX = NO
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = -
