@@ -8,6 +8,8 @@
 
 Choose the **`.dmg` file** under **Assets**, open it, and drag **EarStudio Companion** into **Applications**. Requires macOS 14 or newer; works on Apple Silicon and Intel Macs. [Installation help](#download-and-install).
 
+> **First launch:** macOS marks browser downloads as quarantined. This release is **not notarized by Apple**, so macOS may block it with an “Apple could not verify” warning. Click **Done**, open **System Settings → Privacy & Security**, scroll down to **Security**, and click **Open Anyway** beside EarStudio Companion. Authenticate and confirm **Open**. [Detailed first-launch steps](#first-launch-on-macos).
+
 A good DAC shouldn’t spend its retirement in a drawer. The discontinued **EarStudio ES100 and ES100 MK2** still have plenty to offer: 24-bit/48 kHz USB audio on a Mac, analog volume control and a balanced headphone output. But with the original iOS and Android apps gone from their stores, owners rediscovering their devices can lose access to the settings that make them so useful.[^app-availability] I built **EarStudio Companion** to give this hardware a second life. With no official open-source app to build on, I studied decompiled code from the Android APK to understand how it talks to the firmware, then wrote an independent native macOS app. See the [research provenance](Docs/Provenance.md) for the evidence behind the implementation.
 
 Adjust the device’s equalizer, output, DAC processing, inputs, ambient/call settings and battery options from a SwiftUI interface inspired by the original Android app.
@@ -22,7 +24,18 @@ This is an early community release, unaffiliated with Radsone. Physical testing 
 2. Quit any older version, open the DMG, and drag **EarStudio Companion** into **Applications**.
 3. Eject the DMG and open the app from Applications.
 
-The current release is **ad-hoc signed and not notarized by Apple**. If macOS blocks the downloaded app, attempt to open it, then use **System Settings → Privacy & Security → Open Anyway** for the copy you intentionally downloaded from this project. Keep Gatekeeper enabled. See [Apple’s instructions for opening an app from an unidentified developer](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac).
+### First launch on macOS
+
+Browser downloads receive macOS’s quarantine marker, which triggers Gatekeeper’s security checks. The current release is **ad-hoc signed and not notarized by Apple**, so the downloaded app may show **“EarStudio Companion.app” Not Opened** and say Apple could not verify it is free of malware. A locally generated copy may open without this download warning.
+
+For the copy you intentionally downloaded from this project’s GitHub Releases:
+
+1. Open **EarStudio Companion** from **Applications** once so macOS displays the warning, then click **Done**.
+2. Open the **Apple menu → System Settings → Privacy & Security**.
+3. Scroll down to the **Security** section and click **Open Anyway** beside the message about EarStudio Companion being blocked.
+4. Authenticate when prompted and confirm **Open**. You can then launch the app normally from Applications.
+
+This approves this app while keeping Gatekeeper enabled. See [Apple’s instructions for opening an app that hasn’t been notarized](https://support.apple.com/en-us/102445#openanyway).
 
 Each release includes a SHA-256 checksum. Download it beside the DMG and run `shasum -a 256 -c` followed by the checksum filename to verify the download.
 
