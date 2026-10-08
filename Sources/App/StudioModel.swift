@@ -39,6 +39,8 @@ final class StudioModel: ObservableObject {
     private var closingTransport: ControlTransport?
     private let makeTransport: () -> ControlTransport
     private let saveDeviceKey: (UInt16, String) -> Bool
+    private let readDeviceKey: (String) -> UInt16
+    private let forgetDeviceKey: (String) -> Bool
     private let resetBluetooth: (IOBluetoothDevice, @escaping (IOReturn) -> Void) -> Void
     private var selectedDevice: DiscoveredDevice?
     private var discovery: BluetoothTransport?
@@ -59,7 +61,9 @@ final class StudioModel: ObservableObject {
     private let defaults: UserDefaults
 
     init(demo: Bool = false, makeTransport: @escaping () -> ControlTransport = { BluetoothTransport() },
-         saveDeviceKey: @escaping (UInt16, String) -> Bool = { DeviceKeyStore.save($0, for: $1) },
+         saveDeviceKey: @escaping (UInt16, String) -> Bool = { DeviceKeyStore.shared.save($0, for: $1) },
+         readDeviceKey: @escaping (String) -> UInt16 = { DeviceKeyStore.shared.read($0) },
+         forgetDeviceKey: @escaping (String) -> Bool = { DeviceKeyStore.shared.forget($0) },
          resetBluetooth: @escaping (IOBluetoothDevice, @escaping (IOReturn) -> Void) -> Void = { device, done in
              // This SDK call is synchronous. Keep the main run loop available
              // for Bluetooth callbacks and cancellation while it closes audio.
@@ -70,6 +74,8 @@ final class StudioModel: ObservableObject {
          }) {
         self.makeTransport = makeTransport
         self.saveDeviceKey = saveDeviceKey
+        self.readDeviceKey = readDeviceKey
+        self.forgetDeviceKey = forgetDeviceKey
         self.resetBluetooth = resetBluetooth
         defaults = demo ? UserDefaults(suiteName: "EarStudioCompanion.Demo")! : .standard
         if let data = defaults.data(forKey: "presets"), let loaded = try? PresetFile.decode(data) { presets = loaded }
@@ -125,7 +131,7 @@ final class StudioModel: ObservableObject {
             guard let self, self.generation == current else { return }
             self.phase = .authenticating
             self.log("Control channel opened. Authenticating.")
-            self.sendNow(.authenticate, Wire.u16(DeviceKeyStore.read(self.address)))
+            self.sendNow(.authenticate, Wire.u16(self.readDeviceKey(self.address)))
             self.authTimer = Timer.scheduledTimer(withTimeInterval: 180, repeats: false) { [weak self] _ in
                 self?.connectionFailed("Device confirmation timed out. Reconnect and briefly press the ES100 power button when prompted.")
             }
@@ -205,7 +211,11 @@ final class StudioModel: ObservableObject {
     }
     func forgetKey() {
         guard !address.isEmpty else { return }
-        DeviceKeyStore.forget(address); disconnect()
+        guard forgetDeviceKey(address) else {
+            message = "Could not remove the saved device confirmation. Please try again."
+            return
+        }
+        disconnect()
         message = "Saved device confirmation removed. Press the ES100 power button on your next connection."
     }
     private func connectionFailed(_ text: String) { log(text); disconnect(); message = text }
@@ -224,7 +234,7 @@ final class StudioModel: ObservableObject {
             if packet.id == 0x0303, status == 0 {
                 guard packet.payload.count >= 3 else { continue }
                 if !saveDeviceKey(Wire.readU16(packet.payload, 1), address) {
-                    message = "Connected, but the confirmation key could not be saved in Keychain. You may need to confirm again next time."
+                    message = "Connected, but the device confirmation could not be saved. You may need to press the ES100 power button again next time."
                 }
                 authTimer?.invalidate(); authTimer = nil
                 isAuthenticated = true; phase = .syncing

@@ -138,6 +138,12 @@
 			path = "ControlMappingTests.swift";
 			sourceTree = "<group>";
 		};
+		A0BF4AE81A9785684120C3FA = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "DeviceKeyStoreTests.swift";
+			sourceTree = "<group>";
+		};
 		D39463AE7C6B16F33156653C = {
 			isa = "PBXFileReference";
 			lastKnownFileType = "sourcecode.swift";
@@ -150,6 +156,7 @@
 				"2FC8C8F162D44C47E8DD4D01",
 				"583461682C5B2FA4844F4A2E",
 				"6D199A0B6BE2663138B83408",
+				"A0BF4AE81A9785684120C3FA",
 				"D39463AE7C6B16F33156653C",
 			);
 			path = "Tests";
@@ -485,6 +492,10 @@
 			isa = "PBXBuildFile";
 			fileRef = "6D199A0B6BE2663138B83408";
 		};
+		F8509280981DBC981950D634 = {
+			isa = "PBXBuildFile";
+			fileRef = "A0BF4AE81A9785684120C3FA";
+		};
 		62E164E3C5652FD03130C61E = {
 			isa = "PBXBuildFile";
 			fileRef = "D39463AE7C6B16F33156653C";
@@ -496,6 +507,7 @@
 				"AC6E0BAEE802CC1BBA83CE05",
 				"B118F54DA8866B991E9D9051",
 				"8D9DBA9948EFD3FD5004BF06",
+				"F8509280981DBC981950D634",
 				"62E164E3C5652FD03130C61E",
 			);
 			runOnlyForDeploymentPostprocessing = 0;

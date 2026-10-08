@@ -6,7 +6,7 @@ Recorded on 2026-10-07. This document identifies the evidence supporting the ind
 
 Original Android artifacts and eight manufacturer PDFs are preserved separately in a private research archive, pinned to evidence commit `1195d17b9c3ccdf27f0aae442c47550264c7c08b`. Its artifact manifest records sizes and SHA-256 hashes for 289 files: eight PDFs and 281 Android evidence files. The PDF catalog records original filenames, titles, dates, metadata and hashes.
 
-The public Mac repository and release app contain independently authored source, tests, documentation and vector artwork. They do not contain Android binaries, reconstructed Java, vendor PDFs or recovered manufacturer imagery. Access to the evidence archive is not required to build or run the Mac app. Update the pinned evidence identity deliberately when adding research.
+The Mac source, tests, authored documentation and vector artwork are independently authored. The README also links to eight unchanged manufacturer PDFs in `Docs/Reference` and uses the original Android app's product photo in `Docs/Images/es100.png`. These reference assets are third-party materials, outside the project's MIT license, and are not bundled into the release app. Android binaries and reconstructed Java remain in the private research archive. Access to that archive is not required to build or run the Mac app. Update the pinned evidence identity deliberately when adding research.
 
 ## Input identity and limitations
 
@@ -51,6 +51,8 @@ Following the reported cross-band slider problem, the EQ fragment and seekbar li
 
 Eight supplied PDFs were preserved without altering their original names or bytes. Hashes were checked after copying and against archived Git blobs. No duplicate PDF content was found.
 
+Copies are now linked directly from the [README's manuals and technical references](../README.md#manuals-and-technical-references). The copies in `Docs/Reference` have descriptive filenames; their bytes match the SHA-256 hashes recorded in the research archive's `docs/catalog.json`.
+
 The collection contains two manuals and six Radsone technical notes on filtering, preamplifier use, single-ended performance, architecture/features, analog volume and DualDrive. **No standalone AK4375A or CSR8675 component datasheet was found in that folder.** The original-ES100 material dates mainly to 2017-2018 and does not establish MK2 board identity, firmware behavior or packet layouts.
 
 Cover dates and metadata-derived dates are distinguished in the catalog. Original download URLs were not recoverable from the available copies. Opaque filenames were not converted into guessed URLs, and publisher contact links were not substituted for download locations.
@@ -73,7 +75,7 @@ A physical read-only ES100 firmware 2.0.2 session was performed during this audi
 
 ## Ownership and repository boundaries
 
-The Mac is an independent Swift implementation. Authored documentation/source/tests are in `earstudio-mac`; unchanged vendor PDFs, Android binaries and reconstructed evidence are in private `earstudio-research`. No rights to redistribute vendor material are asserted. Neither archive access nor a future Mac open-source license automatically covers those originals; the research archive remains private and is outside the public release scope. The MIT license applies to the independently authored Mac materials.
+The Mac is an independent Swift implementation. Authored documentation/source/tests are in `earstudio-mac`; Android binaries and reconstructed evidence remain in private `earstudio-research`. The Mac repository also includes reference copies of the eight vendor PDFs and the README product photo. The MIT license applies only to the independently authored Mac materials, not these third-party originals.
 
 ## In-app explanations and original artwork
 
@@ -92,4 +94,4 @@ The companion's Info page and contextual help are independently worded explanati
 | Ambient/microphone/call loopback | `0x7f080030`, `0x7f080132`, `0x7f080134` |
 | Battery care and self-powered mode | `0x7f08004c`–`0x7f08004d`, `0x7f080169`–`0x7f08016a` |
 
-The public release uses an original SwiftUI vector illustration of the device in `Sources/UI/Components.swift`; its green ring is decorative, while the adjacent status badge reports connection state. The app icon is also independently drawn by `Tools/generate_icon.swift`. Recovered manufacturer product imagery was excluded from the public repository and app because no redistribution license was recorded for it.
+The current Mac source uses an original SwiftUI vector illustration of the device in `Sources/UI/Components.swift`; its green ring is decorative, while the adjacent status badge reports connection state. The app icon is also independently drawn by `Tools/generate_icon.swift`. The README instead uses an unchanged copy of the original Android resource `res/drawable-xxhdpi-v4/intro_earstudio.png`, matching the product photo requested by the user. That photo is third-party artwork and is not covered by the project's MIT license.

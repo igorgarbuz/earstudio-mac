@@ -45,7 +45,7 @@ The command high bit `0x8000` marks a device reply/notification; the base ID is 
 
 1. After opening RFCOMM, send `0x0300` with the saved `u16` device key, or `0000` if none exists.
 2. Successful `0x0302` indicates physical power-button confirmation is required.
-3. Successful `0x0303` supplies `[status, key_hi, key_lo]`; the Mac saves the key in Keychain and begins readback.
+3. Successful `0x0303` supplies `[status, key_hi, key_lo]`; the Mac remembers the key in a local Application Support file and begins readback. Unchanged keys are not rewritten. Storage is a Mac implementation policy, not a firmware requirement.
 4. `0x0304`, or a failed `0x0300` acknowledgement, ends the attempt.
 5. Empty command `0x0301` **cancels authentication**. It is not an authentication-status query.
 

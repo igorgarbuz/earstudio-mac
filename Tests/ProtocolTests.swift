@@ -300,7 +300,7 @@ final class ProtocolTests: XCTestCase {
 import IOBluetooth
 
 /// Exercise the real SwiftUI bindings and readback reconciliation, without Bluetooth
-/// or Keychain writes. The fake device independently follows Android's 1...10 IDs.
+/// or device-token file writes. The fake device independently follows Android's 1...10 IDs.
 final class DeviceSynchronizationTests: XCTestCase {
     private func connectedModel(_ link: EQDeviceTransport) -> StudioModel {
         let model = StudioModel(makeTransport: { link }, saveDeviceKey: { _, _ in true })

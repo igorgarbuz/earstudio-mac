@@ -1,6 +1,16 @@
+<p align="center">
+  <img src="Docs/Images/es100.png" alt="EarStudio ES100 product photo from the original app" width="246">
+</p>
+
 # EarStudio Companion for macOS
 
-An independent native macOS app for controlling the **EarStudio ES100 and ES100 MK2**. Adjust the device’s equalizer, output, DAC processing, inputs, ambient/call settings and battery options from a SwiftUI interface inspired by the original Android app.
+**[⬇ Download for macOS — latest release](https://github.com/igorgarbuz/earstudio-mac/releases/latest)**
+
+Choose the **`.dmg` file** under **Assets**, open it, and drag **EarStudio Companion** into **Applications**. Requires macOS 14 or newer; works on Apple Silicon and Intel Macs. [Installation help](#download-and-install).
+
+A good DAC shouldn’t spend its retirement in a drawer. The discontinued **EarStudio ES100 and ES100 MK2** still have plenty to offer: 24-bit/48 kHz USB audio on a Mac, analog volume control and a balanced headphone output. But with the original iOS and Android apps gone from their stores, owners rediscovering their devices can lose access to the settings that make them so useful.[^app-availability] I built **EarStudio Companion** to give this hardware a second life. With no official open-source app to build on, I studied decompiled code from the Android APK to understand how it talks to the firmware, then wrote an independent native macOS app. See the [research provenance](Docs/Provenance.md) for the evidence behind the implementation.
+
+Adjust the device’s equalizer, output, DAC processing, inputs, ambient/call settings and battery options from a SwiftUI interface inspired by the original Android app.
 
 Requires **macOS 14 or newer**. Release downloads contain both **Apple Silicon and Intel** code. No audio driver or Xcode installation is needed to use the app.
 
@@ -20,10 +30,12 @@ Each release includes a SHA-256 checksum. Download it beside the DMG and run `sh
 
 1. Turn on your ES100/MK2 and pair it in **System Settings → Bluetooth**.
 2. Allow the app Bluetooth access when prompted, choose **Connect**, and select your EarStudio.
-3. If device authorization is requested, briefly press its power button within three minutes. The returned device key is stored in macOS Keychain.
+3. If device authorization is requested, briefly press its power button within three minutes. The app remembers that authorization locally for future connections; no Keychain password is needed.
 4. Wait for settings to load before editing. To play Mac audio through EarStudio, select it separately in macOS Sound settings.
 
 The app starts disconnected and sends no settings on startup. **Demo mode** lets you explore the interface without a device. Only one app process can run at a time: opening another copy brings the existing app forward. Close other EarStudio controllers before connecting.
+
+Device authorization tokens are stored in `~/Library/Application Support/EarStudioCompanion/device-keys.json`, with access restricted to your macOS user (directory `0700`, file `0600`). When upgrading from a version that used Keychain, press the device's power button once if prompted. The app does not read, migrate, or delete the old Keychain entry.
 
 macOS Bluetooth audio and the app’s control channel are separate connections. If control fails to open after relaunch, choose **Reconnect Bluetooth** in the connection banner. This briefly disconnects EarStudio audio and attempts to reopen control, preserving pairing and the saved key. You can also disconnect/reconnect EarStudio in macOS Bluetooth settings. A process guard prevents overlapping Companion sessions, but cannot guarantee recovery from every OS/device Bluetooth failure.
 
@@ -90,14 +102,33 @@ The script requires a clean checkout whose commit matches the remote default bra
 
 The repository root is the standalone Mac project. The native project groups lifecycle/Bluetooth/model code under App, protocol/state/preset code under Core, and SwiftUI screens under UI. The headless Swift package shares the protocol code and core tests; app-specific tests run through Xcode.
 
-- [Protocol reference](https://github.com/igorgarbuz/earstudio-mac/blob/main/Docs/Protocol.md): framing, authentication, commands, units, reply layouts and firmware gates.
-- [Control audit](https://github.com/igorgarbuz/earstudio-mac/blob/main/Docs/ControlAudit.md): every exposed setting’s write/read mapping, corrections and validation limits.
-- [Provenance](https://github.com/igorgarbuz/earstudio-mac/blob/main/Docs/Provenance.md): source identities and evidence scope.
+- [Protocol reference](Docs/Protocol.md): framing, authentication, commands, units, reply layouts and firmware gates.
+- [Control audit](Docs/ControlAudit.md): every exposed setting’s write/read mapping, corrections and validation limits.
+- [Provenance](Docs/Provenance.md): source identities and evidence scope.
 
 Regression tests cover protocol fixtures, every control against simulated firmware, unchanged neighboring fields, optional acknowledgements, signed units, firmware boundaries, queued edits, connection cleanup and process ownership. They complement hardware testing; they do not establish physical behavior of every setting or compatibility with every firmware version.
 
 Report bugs through [GitHub Issues](https://github.com/igorgarbuz/earstudio-mac/issues), including app/macOS/device firmware versions, reproduction steps and sanitized diagnostics. Exclude authentication keys and personal Bluetooth identifiers.
 
+## Manuals and technical references
+
+The original Radsone PDFs are preserved here for owners who want to explore the hardware and its settings. These documents describe the original ES100 and date from 2017–2018; details may differ on the MK2 or other firmware versions.
+
+| PDF | What it covers |
+| --- | --- |
+| [ES100 manual](Docs/Reference/es100-manual.pdf) | Buttons, LEDs, pairing, app settings and firmware updates. |
+| [ES100 quick start guide](Docs/Reference/es100-quick-start.pdf) | Physical controls, connections and first-time pairing. |
+| [Technologies and main features](Docs/Reference/technologies-and-features.pdf) | CSR8675 Bluetooth processor, dual AK4375a DACs, USB and DSP architecture. |
+| [AK4375a DAC digital filters](Docs/Reference/dac-digital-filter.pdf) | Filter options and their measured responses. |
+| [Analog volume control](Docs/Reference/analog-volume-control.pdf) | Programmable gain amplifier design and volume measurements. |
+| [DualDrive technology](Docs/Reference/dualdrive-technology.pdf) | Dual DAC/amplifier design and balanced versus single-ended outputs. |
+| [Preamplifier application note](Docs/Reference/preamplifier.pdf) | Connecting the ES100 to an amplifier and estimating output levels. |
+| [Performance evaluation](Docs/Reference/performance-evaluation.pdf) | Manufacturer measurements of the 3.5 mm single-ended output. |
+
+The six technical PDFs are Radsone application notes and reports, rather than chip datasheets. Standalone AKM AK4375A and Qualcomm CSR8675 datasheets are not included in the available collection. Firmware-update instructions in the manual refer to the original tools; this companion does not flash firmware.
+
 ## License
 
-The independently authored code, tests, documentation and vector artwork are [MIT licensed](https://github.com/igorgarbuz/earstudio-mac/blob/main/LICENSE). Vendor Android binaries, decompiled material, manuals and recovered product artwork are not distributed in this repository or its app. EarStudio and other product names belong to their respective owners.
+The independently authored code, tests, documentation and vector artwork are [MIT licensed](https://github.com/igorgarbuz/earstudio-mac/blob/main/LICENSE). The Radsone PDFs in `Docs/Reference` and the original product photo in `Docs/Images` are third-party reference materials and are not covered by that license. Vendor Android binaries and decompiled material are not distributed in this repository or its app. EarStudio and other product names belong to their respective owners.
+
+[^app-availability]: App availability checked in October 2026: [AppBrain’s Android listing](https://www.appbrain.com/app/earstudio/com.dealon.earstudio) records removal from Google Play in May 2025; [Soft112’s iOS listing](https://earstudio-ios.soft112.com/earstudio-ios-alternatives.html) reports removal from the App Store. These records do not establish when or why Radsone ceased operations.
