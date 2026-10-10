@@ -113,36 +113,13 @@ struct Metric: View {
 
 struct DeviceImage: View {
     var body: some View {
-        // Original vector illustration, independent of manufacturer artwork.
-        ZStack {
-            RoundedRectangle(cornerRadius: 23)
-                .fill(.linearGradient(colors: [Color(white: 0.37), Color(white: 0.13)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 127, height: 203).offset(x: 7, y: 3)
-            RoundedRectangle(cornerRadius: 21)
-                .fill(.linearGradient(colors: [Color(white: 0.17), Color(white: 0.055)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                .overlay(RoundedRectangle(cornerRadius: 21).stroke(.white.opacity(0.18), lineWidth: 1))
-                .frame(width: 124, height: 201)
-            VStack(spacing: 0) {
-                HStack(spacing: 19) {
-                    Circle().fill(.black).overlay(Circle().stroke(.white.opacity(0.28), lineWidth: 2)).frame(width: 16, height: 16)
-                    Circle().fill(.black).overlay(Circle().stroke(.white.opacity(0.28), lineWidth: 2)).frame(width: 12, height: 12)
-                }.padding(.top, 10)
-                Spacer()
-                Circle().stroke(StudioTheme.green.opacity(0.8), lineWidth: 2)
-                    .background(Circle().fill(.white.opacity(0.025)))
-                    .frame(width: 39, height: 39)
-                Spacer()
-                Text("ES100").font(.system(size: 14, weight: .medium, design: .rounded)).tracking(2)
-                    .foregroundStyle(.white.opacity(0.75))
-                Text("USB · BLUETOOTH").font(.system(size: 5, weight: .medium)).tracking(1)
-                    .foregroundStyle(.white.opacity(0.35)).padding(.top, 6).padding(.bottom, 22)
-            }.frame(width: 124, height: 201)
-        }
-        .rotationEffect(.degrees(-8))
-        .shadow(color: .black.opacity(0.4), radius: 12, x: 6, y: 12)
-        .frame(width: 190, height: 235)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Illustration of an EarStudio ES100")
+        // The same unchanged Android product photo used in the README.
+        // Attribution and licensing are recorded in Docs/Provenance.md.
+        Image("ES100Product")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 220, height: 235)
+            .accessibilityLabel("EarStudio ES100 product photo")
     }
 }
 

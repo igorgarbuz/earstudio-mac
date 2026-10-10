@@ -14,7 +14,7 @@ struct OverviewView: View {
                         StatusPill(text: model.isDemo ? "DEMO MODE" : model.phase.rawValue.uppercased(), color: model.phase.statusColor)
                         HStack(spacing: 12) {
                             if model.phase == .connected { Button("Refresh settings") { model.refresh() }; Button("Disconnect") { model.disconnect() } }
-                            else { Button("Connect EarStudio…") { model.prepareConnection() }.buttonStyle(.borderedProminent) }
+                            else { Button("Connect") { model.requestConnection() }.buttonStyle(.borderedProminent).disabled(model.isBusy) }
                         }.padding(.top, 5)
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -27,7 +27,7 @@ struct OverviewView: View {
                     Image(systemName: "chevron.right").foregroundStyle(StudioTheme.secondary).font(.caption)
                     Metric(label: "Processing", value: model.canEdit ? (model.state.eqEnabled ? "10-band EQ" : "EQ bypassed") : "—")
                     Image(systemName: "chevron.right").foregroundStyle(StudioTheme.secondary).font(.caption)
-                    Metric(label: "Output", value: model.canEdit ? (model.state.outputMode < 2 ? "3.5 mm" : "2.5 mm balanced") : "—")
+                    Metric(label: "Output mode", value: model.canEdit ? (model.state.outputMode < 2 ? "3.5 mm" : "2.5 mm balanced") : "—")
                 }
             }
             HStack(spacing: 18) {
@@ -46,7 +46,7 @@ struct SoundView: View {
     @EnvironmentObject var model: StudioModel
     var body: some View {
         VStack(spacing: 18) {
-            Panel(title: "Analog output", subtitle: "Choose the headphone connection and amplifier mode.") {
+            Panel(title: "Analog output", subtitle: "Selected output and amplifier mode; this does not confirm that headphones are plugged in.") {
                 InfoButton(topic: .output)
                 HStack(spacing: 10) {
                     ForEach(0..<4) { mode in
@@ -63,6 +63,8 @@ struct SoundView: View {
                     }
                 }
                 SettingToggle(title: "Lock output selection", detail: "Keep the selected connection and amplifier mode.", value: model.boolBinding(\.outputLocked, .outputLock)).disabled(!model.available(.audio, .outputLock))
+                Text("With the 3.5 mm jack empty, ES100 can report 2.5 mm balanced mode even when no headphones are connected.")
+                    .font(.caption).foregroundStyle(StudioTheme.secondary)
             }
             HStack(alignment: .top, spacing: 18) {
                 Panel(title: "DAC filter", subtitle: "AK4375A reconstruction filter") {
@@ -308,8 +310,10 @@ struct InfoContent: View {
                 caution("Use the 2.5 mm output only with a compatible balanced cable. Do not adapt it to 3.5 mm single-ended, AUX, or RCA: joining the negative outputs can damage the amplifier. The ES100 pin order from tip to sleeve is R−, R+, L+, L−. Check the cable wiring before connecting.")
                 caution("The original app reserves 2.5 mm / 2× voltage for headphones above 300 Ω and warns against low-impedance earphones. Lower analog volume before changing headphones or amplifier mode.")
                 paragraph("The original app allows balanced output when the 3.5 mm jack is empty; inserting a 3.5 mm plug selects the single-ended connection.")
+                paragraph("The output label reports the selected amplifier mode, not headphone presence. An empty device can therefore show 2.5 mm balanced; that does not mean a balanced cable is connected.")
             case .volume:
                 paragraph("Analog volume controls the ES100’s programmable gain amplifier (PGA). Source volume changes the signal level sent by the phone or computer. These are separate controls; the companion’s bottom slider adjusts analog volume in dB, not the Mac’s system volume.")
+                paragraph("The mode below the slider is the ES100’s selected output, not a headphone detector. It can show 2.5 mm balanced with no headphones plugged in; inserting a 3.5 mm plug selects unbalanced output.")
                 paragraph("The Android app recommends a high source level and using analog volume for listening adjustments. Before raising the source level, lower analog volume, then increase it gradually to a comfortable level. This companion does not automatically change source volume on connection.")
                 paragraph("Maximum analog volume caps the device’s analog gain. Notification volume adjusts the ES100’s local tones relative to analog volume; it is separate from music volume.")
             case .equalizer:

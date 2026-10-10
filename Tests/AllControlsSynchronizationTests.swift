@@ -140,6 +140,35 @@ final class AllControlsSynchronizationTests: XCTestCase {
         XCTAssertEqual(model.state.outputMode, original.outputMode)
     }
 
+    func testFactoryPresetsPreserveProcessingSettingsAndSavedLibrary() {
+        // Rock, Flat and Bass Reducer cover mixed, zero and negative gains.
+        for index in [16, 7, 2] {
+            let link = AllControlsDevice()
+            link.replies[80]![1] = 0 // Keep EQ bypassed.
+            link.replies[80]![2] = 20 // Existing +2 dB preamp must reset to zero.
+            link.replies[80]![13] = 2 // -12 dB headroom, compensation off.
+            link.replies[80]![14] = 0x0B; link.replies[80]![15] = 0x50 // Wide Q.
+            let model = connectedModel(link)
+            let saved = model.presets
+            let preset = FactoryEQPreset.all[index]
+            var expected = model.state
+            expected.preamp = 0; expected.bands = preset.bands
+            let done = expectation(description: "Factory preset \(preset.name) read back")
+            link.onQuery = { _ in done.fulfill() }
+            model.applyFactoryPreset(preset)
+            wait(for: [done], timeout: 2)
+            link.onQuery = nil
+            XCTAssertEqual(link.writes.map(\.id), [0x0144])
+            XCTAssertEqual(link.queries, [0x0050])
+            XCTAssertEqual(model.state, expected, "Factory presets change only preamp and bands")
+            XCTAssertEqual(model.presets, saved)
+            XCTAssertEqual(model.presetName, preset.name)
+            XCTAssertEqual(model.pendingCount, 0)
+            XCTAssertNil(model.message)
+            model.disconnect()
+        }
+    }
+
     func testPresetGainsQAndHeadroomAreSerializedAndReadBack() {
         let link = AllControlsDevice(); let model = connectedModel(link)
         defer { model.disconnect() }
@@ -196,7 +225,7 @@ private final class AllControlsDevice: ControlTransport {
     var onOpen: (() -> Void)?
     var onData: ((Data) -> Void)?
     var onClose: (() -> Void)?
-    var onError: ((String) -> Void)?
+    var onError: ((TransportFailure) -> Void)?
     var onDiagnostic: ((String) -> Void)?
     var onQuery: ((UInt16) -> Void)?
     var sendWriteACK = false

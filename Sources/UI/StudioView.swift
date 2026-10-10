@@ -68,12 +68,10 @@ struct StudioView: View {
     }
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 10) {
-                HStack(alignment: .center, spacing: 3) {
-                    ForEach(0..<5) { index in
-                        Capsule().fill(StudioTheme.green).frame(width: 3, height: [12.0, 25.0, 18.0, 31.0, 12.0][index])
-                    }
-                }.frame(width: 32)
+            HStack(spacing: 12) {
+                Circle().strokeBorder(StudioTheme.green, lineWidth: 3)
+                    .frame(width: 31, height: 31)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("earstudio").font(.system(size: 21, weight: .medium)).tracking(-0.6)
                     Text("COMPANION").font(.system(size: 8, weight: .medium)).tracking(2.7).foregroundStyle(StudioTheme.secondary)
@@ -102,17 +100,30 @@ struct StudioView: View {
                         Text(model.phase.rawValue).font(.system(size: 10)).foregroundStyle(StudioTheme.secondary)
                     }
                 }
-                Button { model.prepareConnection() } label: {
-                    HStack { Text(model.phase == .connected ? "Change device" : "Connect device"); Spacer(); Image(systemName: "arrow.up.right") }
+                Button { model.hasSelectedDevice ? model.prepareConnection() : model.requestConnection() } label: {
+                    HStack { Text(model.hasSelectedDevice ? "Change device" : "Connect"); Spacer(); Image(systemName: "arrow.up.right") }
                         .font(.system(size: 11, weight: .medium)).padding(10).background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 7))
-                }.buttonStyle(.plain)
+                }.buttonStyle(.plain).disabled(model.isBusy)
             }.padding(15).background(.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 12)).padding(14)
-            HStack {
-                Button(model.isDemo ? "Exit demo" : "Demo mode") { model.isDemo ? model.disconnect() : model.enterDemo() }
-                    .disabled(model.isBusy || model.phase == .connected)
-                Spacer()
-                Button { model.showDiagnostics = true } label: { Image(systemName: "ellipsis.circle") }.help("Diagnostics")
-            }.buttonStyle(.plain).font(.system(size: 10)).foregroundStyle(StudioTheme.secondary).padding(.horizontal, 23).padding(.bottom, 22)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    if model.isDemo || model.phase == .disconnected {
+                        Button { model.isDemo ? model.disconnect() : model.enterDemo() } label: {
+                            Label(model.isDemo ? "Exit demo" : "Try demo", systemImage: model.isDemo ? "xmark.circle" : "play.rectangle")
+                        }
+                        .buttonStyle(.bordered).controlSize(.small)
+                        .foregroundStyle(.primary)
+                        .help(model.isDemo ? "Leave the preview and return to disconnected controls." : "Explore sample settings without connecting to a device.")
+                    }
+                    Spacer()
+                    Button { model.showDiagnostics = true } label: { Image(systemName: "ellipsis.circle") }
+                        .buttonStyle(.plain).help("Diagnostics")
+                }
+                if model.isDemo || model.phase == .disconnected {
+                    Text(model.isDemo ? "Sample settings · no device" : "Explore without a device")
+                        .font(.system(size: 9)).foregroundStyle(StudioTheme.secondary)
+                }
+            }.font(.system(size: 11)).foregroundStyle(StudioTheme.secondary).padding(.horizontal, 23).padding(.bottom, 22)
         }.background(StudioTheme.sidebar)
     }
     private var header: some View {
@@ -131,28 +142,31 @@ struct StudioView: View {
             }
         }.padding(.horizontal, 30).padding(.top, 40).padding(.bottom, 26)
     }
+    private var connectionDetail: String {
+        switch model.phase {
+        case .confirmation: return "Confirm within three minutes. This Mac will remember your device."
+        case .connecting: return "Opening your device settings. Audio may briefly pause if Bluetooth needs recovery."
+        case .retrying: return "Trying the settings connection again while keeping the Bluetooth audio link."
+        case .recovering: return "Audio will briefly disconnect while the app restores the connection."
+        default: return "Connect reads your settings and handles Bluetooth recovery. Audio may briefly pause."
+        }
+    }
     private var connectionBanner: some View {
         HStack(spacing: 12) {
             Image(systemName: model.phase == .confirmation ? "hand.tap" : "antenna.radiowaves.left.and.right").font(.system(size: 18)).foregroundStyle(StudioTheme.green)
             VStack(alignment: .leading, spacing: 4) {
                 Text(model.phase == .confirmation ? "Briefly press the ES100 power button" : (model.isBusy ? model.phase.rawValue + "…" : "Connect an ES100 to read and change settings"))
                     .font(.system(size: 12, weight: .semibold))
-                Text(model.phase == .confirmation ? "Confirm within three minutes. This Mac will remember your device." : "Settings are read from your device when it connects.")
+                Text(connectionDetail)
                     .font(.system(size: 11)).foregroundStyle(StudioTheme.secondary)
             }
             Spacer()
             if model.isBusy {
                 ProgressView().controlSize(.small)
                 Button("Cancel") { model.cancelConfirmation() }
-            } else {
-                VStack(alignment: .trailing, spacing: 5) {
-                    if model.canRecoverBluetooth {
-                        Button("Reconnect Bluetooth") { model.recoverBluetoothConnection() }.buttonStyle(.borderedProminent).tint(StudioTheme.green).foregroundStyle(.black)
-                        Text("Briefly disconnects EarStudio audio").font(.caption).foregroundStyle(StudioTheme.secondary)
-                    } else {
-                        Button("Connect…") { model.prepareConnection() }.buttonStyle(.borderedProminent).tint(StudioTheme.green).foregroundStyle(.black)
-                    }
-                }
+            }
+            if !model.isBusy {
+                Button("Connect") { model.requestConnection() }.buttonStyle(.borderedProminent).tint(StudioTheme.green).foregroundStyle(.black)
             }
         }.padding(16).background(StudioTheme.card, in: RoundedRectangle(cornerRadius: 12)).padding(.horizontal, 28).padding(.bottom, 16)
     }
@@ -165,8 +179,9 @@ struct StudioView: View {
                         Text("ANALOG VOLUME").sectionCaption()
                         InfoButton(topic: .volume, compact: true)
                     }
-                    Text(model.canEdit ? model.state.outputName : "No device connected").font(.system(size: 10)).foregroundStyle(StudioTheme.secondary)
-                }.frame(width: 160, alignment: .leading)
+                    Text(model.canEdit ? "Mode: \(model.state.outputName)" : "No device connected").font(.system(size: 10)).foregroundStyle(StudioTheme.secondary)
+                        .help("The selected output mode does not confirm that headphones are plugged in. With the 3.5 mm jack empty, ES100 can report 2.5 mm balanced mode.")
+                }.frame(width: 180, alignment: .leading)
                 Button { model.boolBinding(\.muted, .mute).wrappedValue.toggle() } label: {
                     Image(systemName: model.state.muted ? "speaker.slash.fill" : "speaker.wave.2.fill").font(.system(size: 17)).foregroundStyle(model.state.muted ? StudioTheme.green : StudioTheme.secondary)
                 }.buttonStyle(.plain).help(model.state.muted ? "Unmute" : "Mute").accessibilityLabel(model.state.muted ? "Unmute" : "Mute").disabled(!model.available(.audio, .mute))
@@ -191,7 +206,7 @@ struct ConnectionSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack { Text("Connect your EarStudio").font(.title2.weight(.semibold)); Spacer(); Button("Done") { dismiss() }.keyboardShortcut(.cancelAction) }
-            Text("Turn on your ES100 or MK2 and pair it in macOS Bluetooth settings. If asked, briefly press its power button to authorize this Mac.")
+            Text("Turn on your ES100 or MK2 and pair it in macOS Bluetooth settings. If asked, briefly press its power button to authorize this Mac. Connect handles Bluetooth recovery if needed; audio may briefly pause.")
                 .font(.callout).foregroundStyle(StudioTheme.secondary).fixedSize(horizontal: false, vertical: true)
             VStack(spacing: 10) {
                 if model.devices.isEmpty {

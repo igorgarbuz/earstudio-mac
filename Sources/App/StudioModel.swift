@@ -6,7 +6,8 @@ import UniformTypeIdentifiers
 enum ConnectionPhase: String {
     case disconnected = "Not connected"
     case connecting = "Connecting"
-    case recovering = "Reconnecting Bluetooth"
+    case retrying = "Retrying settings connection"
+    case recovering = "Restoring Bluetooth connection"
     case authenticating = "Authenticating"
     case confirmation = "Press the power button"
     case syncing = "Reading device"
@@ -21,6 +22,7 @@ struct LogEntry: Identifiable {
 }
 
 final class StudioModel: ObservableObject {
+    private enum ConnectionAttempt { case initial, controlRetry, afterReset }
     @Published private(set) var state = DeviceState()
     @Published private(set) var phase = ConnectionPhase.disconnected
     @Published private(set) var devices: [DiscoveredDevice] = []
@@ -34,7 +36,6 @@ final class StudioModel: ObservableObject {
     @Published var showConnection = false
     @Published var showDiagnostics = false
     @Published var presetName = "Custom"
-    @Published private(set) var canRecoverBluetooth = false
     private var transport: ControlTransport?
     private var closingTransport: ControlTransport?
     private let makeTransport: () -> ControlTransport
@@ -82,8 +83,10 @@ final class StudioModel: ObservableObject {
         if demo { enterDemo() }
     }
     var isDemo: Bool { phase == .demo }
+    var hasSelectedDevice: Bool { selectedDevice != nil }
     var canEdit: Bool { phase == .connected || isDemo }
-    var isBusy: Bool { [.connecting, .recovering, .authenticating, .confirmation, .syncing].contains(phase) }
+    var isBusy: Bool { [.connecting, .retrying, .recovering, .authenticating, .confirmation, .syncing].contains(phase) }
+    private var isOpening: Bool { phase == .connecting || phase == .retrying }
     func available(_ group: StateGroup, _ command: DeviceCommand? = nil) -> Bool {
         guard canEdit, state.loaded.contains(group) else { return false }
         guard let command else { return true }
@@ -92,13 +95,19 @@ final class StudioModel: ObservableObject {
             && (command.stateGroup.map { state.loaded.contains($0) } ?? true)
     }
 
+    func requestConnection() {
+        guard !isBusy else { return }
+        if phase == .disconnected, let selectedDevice { connect(selectedDevice) }
+        else { prepareConnection() }
+    }
     func prepareConnection() {
+        guard !isBusy else { return }
         showConnection = true
         if discovery == nil {
             let scanner = BluetoothTransport()
             scanner.onDevices = { [weak self] in self?.devices = $0 }
             scanner.onScanFinished = { [weak self] in self?.scanning = false }
-            scanner.onError = { [weak self] in self?.message = $0 }
+            scanner.onError = { [weak self] in self?.message = $0.message }
             discovery = scanner
         }
         discovery?.loadPaired()
@@ -118,12 +127,12 @@ final class StudioModel: ObservableObject {
         }
         generation = request; phase = .connecting; message = nil; showConnection = false
     }
-    private func startConnection(_ device: DiscoveredDevice) {
+    private func startConnection(_ device: DiscoveredDevice, attempt: ConnectionAttempt = .initial) {
         generation = UUID()
         let current = generation
         deviceName = device.name; address = device.id
-        selectedDevice = device; canRecoverBluetooth = false
-        phase = .connecting; message = nil; showConnection = false
+        selectedDevice = device
+        phase = attempt == .controlRetry ? .retrying : .connecting; message = nil; showConnection = false
         confirmed = DeviceState(); state = confirmed; presetName = "Device settings"
         let link = makeTransport()
         link.onDiagnostic = { [weak self] in self?.log($0) }
@@ -141,15 +150,40 @@ final class StudioModel: ObservableObject {
         }
         link.onClose = { [weak self] in
             guard let self, self.generation == current else { return }
+            if self.isOpening, attempt != .afterReset {
+                self.log("Control channel closed while opening.")
+                self.retryOpening(device, attempt: attempt, allowsControlRetry: true)
+                return
+            }
             self.disconnect(); self.message = "ES100 disconnected. Your saved presets are still available."
         }
-        link.onError = { [weak self] in
+        link.onError = { [weak self] failure in
             guard let self, self.generation == current else { return }
-            let controlOpenFailed = self.phase == .connecting && !$0.contains("Another")
-            self.connectionFailed($0)
-            self.canRecoverBluetooth = controlOpenFailed
+            if self.isOpening, attempt != .afterReset, failure.allowsLinkReset {
+                self.log(failure.message)
+                self.retryOpening(device, attempt: attempt, allowsControlRetry: failure.allowsControlRetry)
+            } else {
+                self.connectionFailed(failure.message + " Try Connect again when the device is ready.")
+            }
         }
         transport = link; link.connect(device.device)
+    }
+    private func retryOpening(_ device: DiscoveredDevice, attempt: ConnectionAttempt, allowsControlRetry: Bool) {
+        guard attempt == .initial, allowsControlRetry else {
+            recoverBluetoothConnection(device)
+            return
+        }
+        // Close only RFCOMM, then rediscover the service on the existing link.
+        // Do not reset A2DP or replay any authentication/settings commands.
+        let request = UUID()
+        log("Retrying the settings channel without resetting Bluetooth audio.")
+        disconnect { [weak self] in
+            DispatchQueue.main.async {
+                guard let self, self.generation == request else { return }
+                self.startConnection(device, attempt: .controlRetry)
+            }
+        }
+        generation = request; phase = .retrying; message = nil
     }
     func disconnect(completion: @escaping () -> Void = {}) {
         generation = UUID()
@@ -160,7 +194,6 @@ final class StudioModel: ObservableObject {
         discovery?.stopScan(); scanning = false
         queue.reset(); effects.removeAll(); needsRefresh.removeAll(); unsupported.removeAll(); decoder.reset()
         pendingCount = 0; isAuthenticated = false; phase = .disconnected
-        canRecoverBluetooth = false
         confirmed = DeviceState(); state = confirmed
         if let previous {
             previous.close { [weak self, weak previous] in
@@ -170,11 +203,10 @@ final class StudioModel: ObservableObject {
         }
         else { completion() }
     }
-    /// Explicit recovery for the stuck macOS/ES100 RFCOMM session. This closes
-    /// the device's baseband link, briefly interrupting its Bluetooth audio.
+    /// One recovery inside a user-initiated Connect attempt. This closes the
+    /// baseband link, briefly interrupting audio, before one final control open.
     /// It never retries a setting write or removes pairing/confirmation keys.
-    func recoverBluetoothConnection() {
-        guard canRecoverBluetooth, let selectedDevice, phase == .disconnected else { return }
+    private func recoverBluetoothConnection(_ device: DiscoveredDevice) {
         let request = UUID()
         disconnect { [weak self] in
             DispatchQueue.main.async {
@@ -183,18 +215,16 @@ final class StudioModel: ObservableObject {
                 self.timer = Timer.scheduledTimer(withTimeInterval: 20, repeats: false) { [weak self] _ in
                     guard let self, self.generation == request else { return }
                     self.connectionFailed("macOS did not finish resetting the Bluetooth link. Disconnect and reconnect EarStudio in Bluetooth settings, then try again.")
-                    self.canRecoverBluetooth = true
                 }
-                self.resetBluetooth(selectedDevice.device) { [weak self] result in
+                self.resetBluetooth(device.device) { [weak self] result in
                     guard let self, self.generation == request else { return }
                     self.timer?.invalidate(); self.timer = nil
                     self.log("Bluetooth link reset completed (\(result)).")
                     guard result == 0 else {
                         self.connectionFailed("macOS could not reset the Bluetooth link (\(result)). Disconnect and reconnect EarStudio in Bluetooth settings, then connect here again.")
-                        self.canRecoverBluetooth = true
                         return
                     }
-                    self.startConnection(selectedDevice)
+                    self.startConnection(device, attempt: .afterReset)
                 }
             }
         }
@@ -432,6 +462,13 @@ final class StudioModel: ObservableObject {
             if ambient { $0.ambientPreamp = preamp; $0.ambientGain = gain }
             else { $0.micPreamp = preamp; $0.micGain = gain }
         }
+    }
+    func applyFactoryPreset(_ preset: FactoryEQPreset) {
+        guard available(.eq, .allGains) else { return }
+        change(.allGains, payload: ([preset.preamp] + preset.bands).map(Wire.gain)) {
+            $0.preamp = preset.preamp; $0.bands = preset.bands
+        }
+        presetName = preset.name
     }
     func applyPreset(_ preset: EQPreset) {
         guard available(.eq, .allGains), let preset = try? preset.validated() else { return }

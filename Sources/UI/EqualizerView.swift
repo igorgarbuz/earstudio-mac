@@ -14,9 +14,17 @@ struct EqualizerView: View {
                     }
                     Spacer()
                     Menu {
-                        Button("Flat") { model.applyPreset(.flat) }.disabled(!model.available(.eq, .allGains))
-                        ForEach(model.presets) { preset in
-                            Button(preset.name) { model.applyPreset(preset) }.disabled(!model.available(.eq, .allGains))
+                        Section("Factory presets") {
+                            ForEach(FactoryEQPreset.all) { preset in
+                                Button(preset.name) { model.applyFactoryPreset(preset) }.disabled(!model.available(.eq, .allGains))
+                            }
+                        }
+                        if !model.presets.isEmpty {
+                            Section("Saved presets") {
+                                ForEach(model.presets) { preset in
+                                    Button(preset.name) { model.applyPreset(preset) }.disabled(!model.available(.eq, .allGains))
+                                }
+                            }
                         }
                         Divider()
                         Button("Save current as preset…") { newName = ""; saving = true }.disabled(!model.available(.eq))

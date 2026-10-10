@@ -32,12 +32,13 @@ EarStudio Companion — macOS 14 or newer
 1. Quit an earlier version of EarStudio Companion before replacing it.
 2. Drag EarStudio Companion.app onto the Applications folder beside it.
 3. Eject this disk image and open EarStudio Companion from Applications.
-4. Use Demo mode, or pair your ES100 in System Settings → Bluetooth
+4. Use Try demo, or pair your ES100 in System Settings → Bluetooth
    and choose Connect in the app.
 
 No audio driver or separate installer is required. The app includes Apple
 Silicon and Intel code. It starts disconnected and does not change device
 settings until you connect and use its controls.
+Connect also handles Bluetooth recovery when necessary; audio may briefly pause.
 
 This community preview is ad-hoc signed and is not notarized by Apple.
 If macOS blocks the downloaded app, attempt to open it, then go to

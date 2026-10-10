@@ -46,18 +46,24 @@ Each release includes a SHA-256 checksum. Download it beside the DMG and run `sh
 3. If device authorization is requested, briefly press its power button within three minutes. The app remembers that authorization locally for future connections; no Keychain password is needed.
 4. Wait for settings to load before editing. To play Mac audio through EarStudio, select it separately in macOS Sound settings.
 
-The app starts disconnected and sends no settings on startup. **Demo mode** lets you explore the interface without a device. Only one app process can run at a time: opening another copy brings the existing app forward. Close other EarStudio controllers before connecting.
+The app starts disconnected and sends no settings on startup. The bordered **Try demo** button, captioned **Explore without a device**, lets you explore sample settings; it appears only when disconnected. An active demo is labeled **DEMO · NO DEVICE**, with an **Exit demo** button. Only one app process can run at a time: opening another copy brings the existing app forward. Close other EarStudio controllers before connecting.
 
 Device authorization tokens are stored in `~/Library/Application Support/EarStudioCompanion/device-keys.json`, with access restricted to your macOS user (directory `0700`, file `0600`). When upgrading from a version that used Keychain, press the device's power button once if prompted. The app does not read, migrate, or delete the old Keychain entry.
 
-macOS Bluetooth audio and the app’s control channel are separate connections. If control fails to open after relaunch, choose **Reconnect Bluetooth** in the connection banner. This briefly disconnects EarStudio audio and attempts to reopen control, preserving pairing and the saved key. You can also disconnect/reconnect EarStudio in macOS Bluetooth settings. A process guard prevents overlapping Companion sessions, but cannot guarantee recovery from every OS/device Bluetooth failure.
+**Connect** handles both opening the settings connection and recovery. It first tries the existing Bluetooth link. A stalled control open waits six seconds instead of twenty, then retries the settings channel once with fresh service discovery while preserving the audio link. The app shows **Retrying settings connection** during that attempt. If both control attempts fail, or service discovery reaches its separate twenty-second deadline, it resets Bluetooth once and makes a final attempt. **Restoring Bluetooth connection** identifies this full reset, which interrupts audio. Playback may need to be resumed in the music app afterward; the companion does not control the player. **Cancel** stops the attempt. If recovery also fails, the app stops and shows the error; the same **Connect** button retries your selected device. Use **Change device** to choose another ES100.
+
+macOS Bluetooth audio and the app’s control channel are separate connections. The ES100 can advertise a different control channel after resetting the link. Recovery preserves pairing and the saved key, never retries settings writes, and does not run after authorization or settings synchronization has started. Permission and ownership failures do not trigger a reset. A process guard prevents overlapping Companion sessions, but cannot guarantee recovery from every OS/device Bluetooth failure.
+
+The **output mode** label reports the ES100’s amplifier mode, not confirmed headphone presence. Seeing **2.5 mm balanced** with both sockets empty is expected: the original app permits balanced mode when no 3.5 mm plug is inserted. Inserting a 3.5 mm plug selects unbalanced output.
+
+The recovered Android protocol does not establish a separate headphone-presence flag. The app therefore does not infer “no headphones” from balanced mode: that would also mislabel an actual balanced connection. See [output-mode evidence](Docs/Protocol.md#output-mode-and-headphone-presence).
 
 ## Features
 
 | Area | Available controls |
 | --- | --- |
 | Equalizer | Ten fixed bands, ±12 dB in 0.1 dB steps; enable/bypass, preamp, wide/narrow Q, headroom and analog compensation |
-| Presets | Local named presets, flat reset, JSON import/export, Android preferences XML import |
+| Presets | 22 Android factory presets, local named presets, flat reset, JSON import/export, Android preferences XML import |
 | Output | Volume/mute, four amplifier modes, output lock, left/right trim, maximum volume |
 | Sound | Four DAC filters, 1×/2×/4× oversampling, crossfeed, DCT |
 | Inputs | Codec/rate/bit-depth readback, AAC/aptX/aptX HD permissions, Bluetooth buffer, USB format, jitter processing |
@@ -69,9 +75,11 @@ Controls follow recovered firmware version gates and require their settings to h
 
 The EQ matches the Android app’s **graphic equalizer**: fixed center frequencies and two Q options. It does not provide arbitrary parametric bands. The plotted curve estimates the response; the ES100 processes the audio. USB-format and hands-free-profile changes require restarting the device.
 
-Firmware flashing, factory reset, device renaming, Android factory preset tables, playback transport controls and an iOS build are not included.
+Firmware flashing, factory reset, device renaming, playback transport controls and an iOS build are not included.
 
 ## Preset compatibility
+
+**EQ → Presets → Factory presets** contains the 22 recovered Android factory curves, including Flat. Selecting one applies its ten band gains and 0 dB preamp while preserving Q, headroom, analog compensation and EQ enable/bypass. Factory presets are separate from your saved library; use **Save current as preset…** to save a customized copy. The separate **Reset to flat** action retains its existing full-preset behavior.
 
 Connection reads the device’s active EQ, including settings previously applied from Android. The Android app’s four saved presets are separate phone-local data. If you have an exported SharedPreferences XML containing `radsone_eq_pre1`–`radsone_eq_pre4`, use **Import EQ Presets**. The app does not extract a phone’s private storage.
 
@@ -144,6 +152,6 @@ The six technical PDFs are Radsone application notes and reports, rather than ch
 
 ## License
 
-The independently authored code, tests, documentation and vector artwork are [MIT licensed](https://github.com/igorgarbuz/earstudio-mac/blob/main/LICENSE). The Radsone PDFs in `Docs/Reference` and the original product photo in `Docs/Images` are third-party reference materials and are not covered by that license. Vendor Android binaries and decompiled material are not distributed in this repository or its app. EarStudio and other product names belong to their respective owners.
+The independently authored code, tests, documentation and app icon are [MIT licensed](https://github.com/igorgarbuz/earstudio-mac/blob/main/LICENSE). The Radsone PDFs in `Docs/Reference` and the original product photo in `Docs/Images` (also bundled in `Resources/Assets.xcassets/ES100Product.imageset` for Overview) are third-party materials and are not covered by that license. Vendor Android binaries and decompiled material are not distributed in this repository or its app. EarStudio and other product names belong to their respective owners.
 
 [^app-availability]: App availability checked in October 2026: [AppBrain’s Android listing](https://www.appbrain.com/app/earstudio/com.dealon.earstudio) records removal from Google Play in May 2025; [Soft112’s iOS listing](https://earstudio-ios.soft112.com/earstudio-ios-alternatives.html) reports removal from the App Store. These records do not establish when or why Radsone ceased operations.

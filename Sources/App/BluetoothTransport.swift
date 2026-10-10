@@ -55,11 +55,31 @@ struct DiscoveredDevice: Identifiable {
     var paired: Bool { device.isPaired() }
 }
 
+struct TransportFailure {
+    let message: String
+    // Only failures of the opening handshake warrant resetting the audio link.
+    // Permission, ownership and settings-write failures must not trigger it.
+    var allowsLinkReset = false
+    // A failed RFCOMM open can first be retried without closing the audio link.
+    // A stalled SDP query has already consumed its longer discovery deadline.
+    var allowsControlRetry = false
+
+    static func allowsReset(for status: IOReturn) -> Bool {
+        // Resetting cannot repair denied access or a powered-off controller.
+        ![kIOReturnNotPermitted, kIOReturnNotPrivileged, kIOReturnNoPower].contains(status)
+    }
+}
+
+struct BluetoothOpeningTimeouts {
+    var discovery: TimeInterval = 20
+    var control: TimeInterval = 6
+}
+
 protocol ControlTransport: AnyObject {
     var onOpen: (() -> Void)? { get set }
     var onData: ((Data) -> Void)? { get set }
     var onClose: (() -> Void)? { get set }
-    var onError: ((String) -> Void)? { get set }
+    var onError: ((TransportFailure) -> Void)? { get set }
     var onDiagnostic: ((String) -> Void)? { get set }
     func connect(_ target: IOBluetoothDevice)
     func send(_ data: Data) -> Bool
@@ -75,11 +95,12 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
     var onOpen: (() -> Void)?
     var onData: ((Data) -> Void)?
     var onClose: (() -> Void)?
-    var onError: ((String) -> Void)?
+    var onError: ((TransportFailure) -> Void)?
     var onDiagnostic: ((String) -> Void)?
     private var inquiry: IOBluetoothDeviceInquiry?
     private var scanRequest = UUID()
     private let readPairedDevices: () -> [IOBluetoothDevice]
+    private let openingTimeouts: BluetoothOpeningTimeouts
     private var devices: [String: DiscoveredDevice] = [:]
     private var device: IOBluetoothDevice?
     private var channel: IOBluetoothRFCOMMChannel?
@@ -102,10 +123,11 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
     }
     private static var channelOwners: [ObjectIdentifier: WeakOwner] = [:]
 
-    init(readPairedDevices: @escaping () -> [IOBluetoothDevice] = {
+    init(openingTimeouts: BluetoothOpeningTimeouts = .init(), readPairedDevices: @escaping () -> [IOBluetoothDevice] = {
         IOBluetoothDevice.pairedDevices() as? [IOBluetoothDevice] ?? []
     }) {
         self.readPairedDevices = readPairedDevices
+        self.openingTimeouts = openingTimeouts
         super.init()
     }
 
@@ -139,7 +161,7 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
         inquiry = scan
         guard let scan, scan.start() == kIOReturnSuccess else {
             inquiry = nil
-            onError?("Bluetooth discovery could not start. Turn on Bluetooth and allow EarStudio in System Settings → Privacy & Security → Bluetooth.")
+            onError?(TransportFailure(message: "Bluetooth discovery could not start. Turn on Bluetooth and allow EarStudio in System Settings → Privacy & Security → Bluetooth."))
             onScanFinished?(); return
         }
     }
@@ -159,7 +181,7 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
     }
     func deviceInquiryComplete(_ sender: IOBluetoothDeviceInquiry!, error: IOReturn, aborted: Bool) {
         inquiry = nil; publishDevices(); onScanFinished?()
-        if error != kIOReturnSuccess && !aborted { onError?("Bluetooth search ended with error \(error).") }
+        if error != kIOReturnSuccess && !aborted { onError?(TransportFailure(message: "Bluetooth search ended with error \(error).")) }
     }
     func connect(_ target: IOBluetoothDevice) {
         stopScan(); closed = false; device = target
@@ -181,17 +203,24 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
             self?.checkOpeningProgress()
         }
         onDiagnostic?("Discovering Bluetooth services. Mac link: \(target.isConnected() ? "connected" : "disconnected").")
-        startOpeningTimeout()
+        startOpeningTimeout(openingTimeouts.discovery)
         let status = target.performSDPQuery(self)
         if status != kIOReturnSuccess { fail("Could not query the device's Bluetooth services (\(status)).") }
     }
-    private func startOpeningTimeout() {
+    private func startOpeningTimeout(_ interval: TimeInterval) {
         openingTimer?.invalidate()
-        openingTimer = Timer.scheduledTimer(withTimeInterval: 20, repeats: false) { [weak self] _ in
-            guard let self else { return }
+        openingTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
+            guard let self, !self.closed else { return }
+            if self.openingRFCOMM {
+                // Give a completed open one final check before declaring a
+                // timeout, including when macOS omitted its delegate callback.
+                self.checkOpeningProgress()
+                guard self.openingRFCOMM else { return }
+            }
+            self.onDiagnostic?("\(self.openingRFCOMM ? "RFCOMM opening" : "Service discovery") timed out after \(interval) seconds.")
             self.fail(self.openingRFCOMM
-                ? "The ES100 control channel did not open. Bluetooth audio can still be connected. Use Reconnect Bluetooth below to reset the device connection."
-                : "Bluetooth service discovery did not finish. Use Reconnect Bluetooth below to reset the EarStudio link.")
+                ? "The ES100 settings connection did not open. Bluetooth audio can still be connected."
+                : "Bluetooth service discovery did not finish.", allowsLinkReset: true, allowsControlRetry: self.openingRFCOMM)
         }
     }
     func checkOpeningProgress() {
@@ -229,7 +258,7 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
     }
     private func openChannel(_ channelID: BluetoothRFCOMMChannelID, on device: IOBluetoothDevice) {
         openingRFCOMM = true
-        startOpeningTimeout()
+        startOpeningTimeout(openingTimeouts.control)
         onDiagnostic?("Opening RFCOMM channel \(channelID).")
         // Do not pass a stored property inout while a delegate callback may run.
         var opened: IOBluetoothRFCOMMChannel?
@@ -237,7 +266,7 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
         channel = opened
         onDiagnostic?("RFCOMM open request returned \(result); channel object: \(opened == nil ? "missing" : "present"); already open: \(opened?.isOpen() == true).")
         guard result == kIOReturnSuccess, let opened else {
-            fail("The control channel could not open (\(result)); macOS did not return a usable channel."); return
+            fail("The control channel could not open (\(result)); macOS did not return a usable channel.", allowsLinkReset: TransportFailure.allowsReset(for: result), allowsControlRetry: TransportFailure.allowsReset(for: result)); return
         }
         Self.channelOwners[ObjectIdentifier(opened)] = WeakOwner(self)
         let delegateStatus = opened.setDelegate(self)
@@ -266,6 +295,10 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
         onDiagnostic?("RFCOMM open completion: \(error); channel object: \(rfcommChannel == nil ? "missing" : "present").")
         if closed {
             if error == kIOReturnSuccess, let rfcommChannel {
+                if let owner = Self.channelOwners[ObjectIdentifier(rfcommChannel)]?.value, owner !== self {
+                    onDiagnostic?("Ignoring a late open for a channel owned by the new attempt.")
+                    return
+                }
                 onDiagnostic?("Closing a channel that opened after cancellation.")
                 _ = rfcommChannel.close()
             }
@@ -279,7 +312,7 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
         openingTimer?.invalidate(); openingTimer = nil
         openingPollTimer?.invalidate(); openingPollTimer = nil
         guard error == kIOReturnSuccess else {
-            fail("The ES100 control channel could not reopen (Bluetooth error \(error)). Use Reconnect Bluetooth below to reset the device connection.")
+            fail("The ES100 control channel could not open (Bluetooth error \(error)).", allowsLinkReset: TransportFailure.allowsReset(for: error), allowsControlRetry: TransportFailure.allowsReset(for: error))
             return
         }
         onOpen?()
@@ -377,7 +410,9 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
         _ = channel.setDelegate(nil)
         Self.channelOwners.removeValue(forKey: id)
     }
-    private func fail(_ message: String) { close(); onError?(message) }
+    private func fail(_ message: String, allowsLinkReset: Bool = false, allowsControlRetry: Bool = false) {
+        close(); onError?(TransportFailure(message: message, allowsLinkReset: allowsLinkReset, allowsControlRetry: allowsControlRetry))
+    }
     deinit {
         openingTimer?.invalidate()
         openingPollTimer?.invalidate()

@@ -127,12 +127,69 @@ final class ConnectionLifecycleTests: XCTestCase {
         device.openStatus = 913
         let transport = BluetoothTransport()
         var error: String?
-        transport.onError = { error = $0 }
+        transport.onError = { error = $0.message }
         transport.connect(device)
         drainMainQueue()
         XCTAssertTrue(error?.contains("913") == true)
         XCTAssertEqual(device.testChannel.closeCount, 1)
         transport.rfcommChannelClosed(device.testChannel)
+    }
+
+    func testPermissionDeniedOpeningChannelDoesNotRequestLinkReset() {
+        let device = BluetoothTestObjects.keep(FakeBluetoothDevice())
+        device.openStatus = kIOReturnNotPermitted
+        let transport = BluetoothTransport()
+        var failure: TransportFailure?
+        transport.onError = { failure = $0 }
+        transport.connect(device); drainMainQueue()
+        XCTAssertNotNil(failure)
+        XCTAssertEqual(failure?.allowsLinkReset, false)
+        XCTAssertEqual(failure?.allowsControlRetry, false)
+        transport.rfcommChannelClosed(device.testChannel)
+    }
+
+    func testStalledControlOpenUsesShortDeadlineAndAllowsControlRetry() {
+        let device = BluetoothTestObjects.keep(FakeBluetoothDevice())
+        device.deliverOpenCallback = false
+        let transport = BluetoothTransport(openingTimeouts: .init(discovery: 2, control: 0.03))
+        let failed = expectation(description: "Control deadline")
+        transport.onError = { failure in
+            XCTAssertTrue(failure.allowsControlRetry)
+            XCTAssertTrue(failure.allowsLinkReset)
+            XCTAssertTrue(failure.message.contains("settings connection"))
+            failed.fulfill()
+        }
+        transport.connect(device)
+        wait(for: [failed], timeout: 1)
+        transport.rfcommChannelClosed(device.testChannel)
+    }
+
+    func testDiscoveryTimeoutDoesNotSpendAnotherDeadlineOnControlRetry() {
+        let device = BluetoothTestObjects.keep(FakeBluetoothDevice())
+        device.deliverSDPCallback = false
+        let transport = BluetoothTransport(openingTimeouts: .init(discovery: 0.03, control: 2))
+        let failed = expectation(description: "Discovery deadline")
+        transport.onError = { failure in
+            XCTAssertFalse(failure.allowsControlRetry)
+            XCTAssertTrue(failure.allowsLinkReset)
+            failed.fulfill()
+        }
+        transport.connect(device)
+        wait(for: [failed], timeout: 1)
+        XCTAssertEqual(device.openCount, 0)
+    }
+
+    func testDeadlineRecognizesOpenChannelBeforeFailingWithoutCallback() {
+        let device = BluetoothTestObjects.keep(FakeBluetoothDevice())
+        device.deliverOpenCallback = false
+        let transport = BluetoothTransport(openingTimeouts: .init(discovery: 2, control: 0.03))
+        let opened = expectation(description: "Deadline checks channel state")
+        transport.onError = { _ in XCTFail("Channel opened without a delegate callback") }
+        transport.onOpen = { opened.fulfill() }
+        transport.connect(device)
+        device.testChannel.open = true
+        wait(for: [opened], timeout: 1)
+        transport.close(); transport.rfcommChannelClosed(device.testChannel)
     }
 
     func testTransportCloseRetainsDelegateUntilCompletionAndIsIdempotent() {
@@ -305,22 +362,214 @@ final class ConnectionLifecycleTests: XCTestCase {
         XCTAssertEqual(try String(contentsOf: target, encoding: .utf8), "unchanged")
     }
 
-    func testBluetoothRecoveryWaitsForCloseAndResetBeforeConnecting() {
+    func testConnectAutomaticallyRecoversOnceAfterOpeningFailure() {
         let first = FakeControlTransport(), second = FakeControlTransport()
         var links: [ControlTransport] = [first, second]
         var resetDone: ((IOReturn) -> Void)?
-        let model = StudioModel(makeTransport: { links.removeFirst() }, resetBluetooth: { _, done in resetDone = done })
+        var resets = 0
+        let model = StudioModel(makeTransport: { links.removeFirst() }, resetBluetooth: { _, done in
+            resets += 1; resetDone = done
+        })
         model.connect(device); drainMainQueue()
-        first.onError?("The ES100 control channel did not open.")
-        XCTAssertTrue(model.canRecoverBluetooth)
-        model.recoverBluetoothConnection()
+        XCTAssertEqual(model.phase, .connecting)
+        XCTAssertEqual(resets, 0, "Try opening control without interrupting audio first")
+
+        first.onError?(TransportFailure(message: "Opening timed out", allowsLinkReset: true))
         XCTAssertEqual(model.phase, .recovering)
-        XCTAssertNil(resetDone)
+        XCTAssertNil(model.message, "Recovery is progress, not a final error")
+        model.requestConnection() // Ignore repeated clicks during recovery.
+        XCTAssertEqual(resets, 0, "Wait for the previous channel to close")
+        first.onOpen?(); first.onError?(TransportFailure(message: "Late failure", allowsLinkReset: true))
+        XCTAssertEqual(model.phase, .recovering)
         first.completeClose(); drainMainQueue()
-        XCTAssertNotNil(resetDone); XCTAssertEqual(second.connectCount, 0)
+        XCTAssertEqual(resets, 1)
+        XCTAssertEqual(second.connectCount, 0)
         resetDone?(0)
         XCTAssertEqual(second.connectCount, 1)
+        first.onOpen?(); first.onClose?()
+        XCTAssertEqual(model.phase, .connecting, "Ignore callbacks from the replaced channel")
+        second.onOpen?()
+        XCTAssertEqual(model.phase, .authenticating)
+        XCTAssertEqual(resets, 1)
         model.disconnect(); second.completeClose()
+    }
+
+    func testCancelRecoveryBeforeCloseDoesNotResetOrReconnect() {
+        let first = FakeControlTransport()
+        let model = StudioModel(makeTransport: { first }, resetBluetooth: { _, _ in XCTFail("Cancelled before reset") })
+        model.connect(device); drainMainQueue()
+        first.onError?(TransportFailure(message: "Opening timed out", allowsLinkReset: true))
+        model.cancelConfirmation()
+        first.completeClose(); drainMainQueue()
+        XCTAssertEqual(model.phase, .disconnected)
+        XCTAssertEqual(first.connectCount, 1)
+    }
+
+    func testRecoveryFailureStopsAndConnectStartsANewAttemptForSameDevice() {
+        let first = FakeControlTransport(), second = FakeControlTransport(), third = FakeControlTransport()
+        var links: [ControlTransport] = [first, second, third]
+        var resets = 0
+        let model = StudioModel(makeTransport: { links.removeFirst() }, resetBluetooth: { _, done in
+            resets += 1; done(0)
+        })
+        model.connect(device); drainMainQueue()
+        first.onError?(TransportFailure(message: "Opening timed out", allowsLinkReset: true))
+        first.completeClose(); drainMainQueue()
+        XCTAssertEqual(second.connectCount, 1)
+        second.onError?(TransportFailure(message: "Still unavailable", allowsLinkReset: true))
+        XCTAssertEqual(model.phase, .disconnected)
+        XCTAssertTrue(model.message?.contains("Still unavailable") == true)
+        XCTAssertEqual(resets, 1, "Do not loop on a failed recovery")
+        XCTAssertEqual(third.connectCount, 0)
+
+        model.requestConnection()
+        XCTAssertFalse(model.showConnection, "Retry the selected device without another device picker")
+        second.completeClose(); drainMainQueue()
+        XCTAssertEqual(third.connectCount, 1)
+        third.onOpen?()
+        XCTAssertEqual(model.phase, .authenticating)
+        XCTAssertEqual(resets, 1)
+        model.disconnect(); third.completeClose()
+    }
+
+    func testSuccessfulOpeningNeverResetsBluetooth() {
+        let link = FakeControlTransport()
+        let model = StudioModel(makeTransport: { link }, resetBluetooth: { _, _ in XCTFail("Control opened normally") })
+        model.connect(device); drainMainQueue()
+        model.requestConnection()
+        model.prepareConnection()
+        XCTAssertFalse(model.showConnection)
+        XCTAssertEqual(link.connectCount, 1)
+        link.onOpen?()
+        XCTAssertEqual(model.phase, .authenticating)
+        model.disconnect(); link.completeClose()
+    }
+
+    func testNonRecoverableFailureDoesNotResetBluetooth() {
+        let link = FakeControlTransport()
+        let model = StudioModel(makeTransport: { link }, resetBluetooth: { _, _ in XCTFail("Permission or ownership failure") })
+        model.connect(device); drainMainQueue()
+        link.onError?(TransportFailure(message: "Bluetooth permission denied"))
+        XCTAssertEqual(model.phase, .disconnected)
+        XCTAssertTrue(model.message?.contains("Bluetooth permission denied") == true)
+        link.completeClose()
+    }
+
+    func testFailureAfterOpeningDoesNotRetryAuthenticationOrSettings() {
+        let link = FakeControlTransport()
+        let model = StudioModel(makeTransport: { link }, resetBluetooth: { _, _ in XCTFail("Recovery is only for opening") })
+        model.connect(device); drainMainQueue()
+        link.onOpen?()
+        // Even a misclassified error cannot reset/replay an authenticated session.
+        link.onError?(TransportFailure(message: "Transmission failed", allowsLinkReset: true))
+        XCTAssertEqual(model.phase, .disconnected)
+        XCTAssertEqual(link.connectCount, 1)
+        link.completeClose()
+    }
+
+    func testChannelClosingDuringOpeningTriggersOneRecovery() {
+        let first = FakeControlTransport(), second = FakeControlTransport(), third = FakeControlTransport()
+        var links: [ControlTransport] = [first, second, third]
+        var resets = 0
+        let model = StudioModel(makeTransport: { links.removeFirst() }, resetBluetooth: { _, done in
+            resets += 1; done(0)
+        })
+        model.connect(device); drainMainQueue()
+        first.onClose?()
+        first.completeClose(); drainMainQueue()
+        XCTAssertEqual(second.connectCount, 1)
+        XCTAssertEqual(resets, 0)
+        second.onClose?()
+        second.completeClose(); drainMainQueue()
+        XCTAssertEqual(third.connectCount, 1)
+        third.onClose?(); third.completeClose(); drainMainQueue()
+        XCTAssertEqual(model.phase, .disconnected)
+        XCTAssertEqual(resets, 1)
+    }
+
+    func testLateOpenFromOldAttemptCannotCloseReusedChannel() {
+        let device = BluetoothTestObjects.keep(FakeBluetoothDevice())
+        device.deliverOpenCallback = false
+        let first = BluetoothTransport(), second = BluetoothTransport()
+        first.connect(device)
+        first.close(); first.rfcommChannelClosed(device.testChannel)
+        second.connect(device)
+        device.testChannel.open = true
+        let closes = device.testChannel.closeCount
+        first.rfcommChannelOpenComplete(device.testChannel, status: 0)
+        drainMainQueue()
+        XCTAssertEqual(device.testChannel.closeCount, closes)
+        second.close(); second.rfcommChannelClosed(device.testChannel)
+    }
+
+    func testControlRetryCanOpenWithoutResettingAudio() {
+        let first = FakeControlTransport(), second = FakeControlTransport()
+        var links: [ControlTransport] = [first, second]
+        let model = StudioModel(makeTransport: { links.removeFirst() }, resetBluetooth: { _, _ in XCTFail("Keep the audio link") })
+        model.connect(device); drainMainQueue()
+        first.onError?(TransportFailure(message: "Control stalled", allowsLinkReset: true, allowsControlRetry: true))
+        XCTAssertEqual(model.phase, .retrying)
+        XCTAssertTrue(model.isBusy)
+        model.requestConnection(); model.prepareConnection()
+        XCTAssertFalse(model.showConnection)
+        XCTAssertEqual(second.connectCount, 0, "Wait until the pending channel has closed")
+        first.onOpen?(); first.onClose?()
+        XCTAssertEqual(model.phase, .retrying)
+        first.completeClose(); drainMainQueue()
+        XCTAssertEqual(second.connectCount, 1)
+        second.onOpen?()
+        XCTAssertEqual(model.phase, .authenticating)
+        model.disconnect(); second.completeClose()
+    }
+
+    func testFailedControlRetryResetsOnceThenStopsOnFinalFailure() {
+        let first = FakeControlTransport(), retry = FakeControlTransport(), final = FakeControlTransport()
+        var links: [ControlTransport] = [first, retry, final]
+        var resets = 0
+        let model = StudioModel(makeTransport: { links.removeFirst() }, resetBluetooth: { _, done in resets += 1; done(0) })
+        let failure = TransportFailure(message: "Control stalled", allowsLinkReset: true, allowsControlRetry: true)
+        model.connect(device); drainMainQueue()
+        first.onError?(failure); first.completeClose(); drainMainQueue()
+        XCTAssertEqual(resets, 0)
+        retry.onError?(failure)
+        XCTAssertEqual(model.phase, .recovering)
+        retry.completeClose(); drainMainQueue()
+        XCTAssertEqual(resets, 1)
+        XCTAssertEqual(final.connectCount, 1)
+        first.onOpen?(); retry.onClose?(); retry.onError?(failure)
+        XCTAssertEqual(model.phase, .connecting)
+        final.onError?(failure)
+        XCTAssertEqual(model.phase, .disconnected)
+        XCTAssertEqual(resets, 1)
+        XCTAssertTrue(links.isEmpty)
+        final.completeClose()
+    }
+
+    func testCancelControlRetryBeforeCloseCannotOpenAnotherChannel() {
+        let first = FakeControlTransport()
+        let model = StudioModel(makeTransport: { first }, resetBluetooth: { _, _ in XCTFail("Cancelled") })
+        model.connect(device); drainMainQueue()
+        first.onError?(TransportFailure(message: "Control stalled", allowsLinkReset: true, allowsControlRetry: true))
+        model.cancelConfirmation()
+        first.completeClose(); drainMainQueue()
+        XCTAssertEqual(model.phase, .disconnected)
+        XCTAssertEqual(first.connectCount, 1)
+    }
+
+    func testControlRetryPermissionFailureDoesNotReset() {
+        let first = FakeControlTransport(), retry = FakeControlTransport()
+        var links: [ControlTransport] = [first, retry]
+        let model = StudioModel(makeTransport: { links.removeFirst() }, resetBluetooth: { _, _ in XCTFail("Permission failure") })
+        model.connect(device); drainMainQueue()
+        first.onError?(TransportFailure(message: "Control stalled", allowsLinkReset: true, allowsControlRetry: true))
+        first.completeClose(); drainMainQueue()
+        retry.onError?(TransportFailure(message: "Permission denied"))
+        XCTAssertEqual(model.phase, .disconnected)
+        retry.completeClose()
+    }
+
+    func testOverviewProductPhotoIsIncludedInAppBundle() {
+        XCTAssertNotNil(NSImage(named: "ES100Product"), "The Overview photo must ship in the compiled asset catalog")
     }
 
     func testBluetoothResetWaitsForObservedDisconnectBeforeReopening() {
@@ -362,8 +611,7 @@ final class ConnectionLifecycleTests: XCTestCase {
         var resetDone: ((IOReturn) -> Void)?
         let model = StudioModel(makeTransport: { links.removeFirst() }, resetBluetooth: { _, done in resetDone = done })
         model.connect(device); drainMainQueue()
-        first.onError?("The ES100 control channel did not open.")
-        model.recoverBluetoothConnection()
+        first.onError?(TransportFailure(message: "The ES100 control channel did not open.", allowsLinkReset: true))
         first.completeClose(); drainMainQueue()
         model.cancelConfirmation()
         resetDone?(0); drainMainQueue()
@@ -375,11 +623,9 @@ final class ConnectionLifecycleTests: XCTestCase {
         let first = FakeControlTransport()
         let model = StudioModel(makeTransport: { first }, resetBluetooth: { _, done in done(913) })
         model.connect(device); drainMainQueue()
-        first.onError?("The ES100 control channel did not open.")
-        model.recoverBluetoothConnection()
+        first.onError?(TransportFailure(message: "The ES100 control channel did not open.", allowsLinkReset: true))
         first.completeClose(); drainMainQueue()
         XCTAssertEqual(model.phase, .disconnected)
-        XCTAssertTrue(model.canRecoverBluetooth)
         XCTAssertTrue(model.message?.contains("913") == true)
         XCTAssertEqual(first.connectCount, 1)
     }
@@ -441,6 +687,7 @@ private final class FakeBluetoothDevice: IOBluetoothDevice {
     private let service = FakeSerialService()
     var openStatus: IOReturn = kIOReturnSuccess
     var deliverOpenCallback = true
+    var deliverSDPCallback = true
     var hasCachedService = true
     var queryCount = 0
     var openCount = 0
@@ -451,7 +698,7 @@ private final class FakeBluetoothDevice: IOBluetoothDevice {
     override func performSDPQuery(_ target: Any!) -> IOReturn {
         queryCount += 1
         hasCachedService = true
-        (target as? BluetoothTransport)?.sdpQueryComplete(self, status: kIOReturnSuccess)
+        if deliverSDPCallback { (target as? BluetoothTransport)?.sdpQueryComplete(self, status: kIOReturnSuccess) }
         return kIOReturnSuccess
     }
     override func performSDPQuery(_ target: Any!, uuids uuidArray: [Any]!) -> IOReturn {
@@ -503,7 +750,7 @@ private final class FakeControlTransport: ControlTransport {
     var onOpen: (() -> Void)?
     var onData: ((Data) -> Void)?
     var onClose: (() -> Void)?
-    var onError: ((String) -> Void)?
+    var onError: ((TransportFailure) -> Void)?
     var onDiagnostic: ((String) -> Void)?
     var connectCount = 0
     var closeCount = 0

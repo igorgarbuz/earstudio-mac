@@ -93,7 +93,7 @@ struct EarStudioApp: App {
         .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(after: .newItem) {
-                Button("Connect to EarStudio…") { model.prepareConnection() }.keyboardShortcut("k")
+                Button("Connect to EarStudio…") { model.requestConnection() }.keyboardShortcut("k").disabled(model.isBusy)
                 Button("Refresh Device Settings") { model.refresh() }.keyboardShortcut("r").disabled(!model.canEdit || model.isDemo)
                 Divider()
                 Button("Import EQ Presets…") { model.importPresets() }
@@ -101,7 +101,8 @@ struct EarStudioApp: App {
             }
             CommandMenu("Device") {
                 Button("Disconnect") { model.disconnect() }.disabled(model.phase == .disconnected)
-                Button("Demo Mode") { model.enterDemo() }.disabled(model.isDemo || model.isBusy)
+                Button(model.isDemo ? "Exit Demo" : "Try Demo") { model.isDemo ? model.disconnect() : model.enterDemo() }
+                    .disabled(model.isBusy || model.phase == .connected)
                 Button("Diagnostics…") { model.showDiagnostics = true }
             }
         }

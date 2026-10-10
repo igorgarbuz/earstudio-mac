@@ -112,6 +112,12 @@ Ranges/labels below describe the exposed Mac choices, not every value firmware m
 
 Output-mode arguments are `01`, `41`, `00`, `20` for single-ended normal/high and balanced normal/high. Output lock is reported in bit 7 of the mode byte but changed using its separate command.
 
+### Output mode and headphone presence
+
+Android 1.9.0 forwards state reply `0x0010` byte 6 and notification `0x0221` byte 1 to the same output decoder (`com.radsone.earstudio.c.a.f(Integer)`). It consumes bit 0 for single-ended versus balanced, bits 6/5 for the corresponding high-power selection, and bit 7 for output lock. Its four UI states are amplifier modes, not three plug-presence states. The original help (`0x7f080041`–`0x7f080042`) permits balanced output when the 3.5 mm jack is empty and single-ended output when a 3.5 mm plug is inserted.
+
+No independent “neither jack occupied” or balanced-plug-presence flag has been established from this decoder or the recovered notifications. This does not prove that the hardware or undocumented firmware cannot expose one. A reliable third state would require additional evidence, such as controlled status/notification captures with both sockets empty, a 3.5 mm plug, and a 2.5 mm plug, including with output lock enabled. Do not assign meanings to unused bits or infer absence from idle input, mute, volume, or balanced mode.
+
 ## Readback layouts (S)
 
 All accepted layouts require vendor `0xA55A`, the high reply bit and status zero. Length rules below describe the Mac decoder, not every possible firmware variant.

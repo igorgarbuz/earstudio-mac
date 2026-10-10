@@ -1,6 +1,6 @@
 import AppKit
 
-// Vector-drawn application icon; no downloaded assets or Android artwork.
+// Vector-drawn LED ring inspired by the ES100; no downloaded or Android artwork.
 let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
 let catalog = root.appendingPathComponent("Resources/Assets.xcassets")
 let destination = catalog.appendingPathComponent("AppIcon.appiconset")
@@ -17,11 +17,10 @@ for size in [16, 32, 128, 256, 512] {
         let outline = NSBezierPath(roundedRect: rect, xRadius: 195, yRadius: 195)
         NSGradient(starting: NSColor(calibratedRed: 0.16, green: 0.20, blue: 0.17, alpha: 1), ending: NSColor(calibratedRed: 0.05, green: 0.07, blue: 0.06, alpha: 1))!.draw(in: outline, angle: -70)
         NSColor.white.withAlphaComponent(0.12).setStroke(); outline.lineWidth = 3; outline.stroke()
-        let heights = [185.0, 330, 480, 280, 145]
-        for (index, height) in heights.enumerated() {
-            let bar = NSBezierPath(roundedRect: NSRect(x: 267 + Double(index) * 104, y: 512 - height / 2, width: 64, height: height), xRadius: 32, yRadius: 32)
-            NSColor(calibratedRed: 133/255, green: 243/255, blue: 75/255, alpha: 1).setFill(); bar.fill()
-        }
+        let ring = NSBezierPath(ovalIn: NSRect(x: 278, y: 278, width: 468, height: 468))
+        ring.lineWidth = 52
+        NSColor(calibratedRed: 133/255, green: 243/255, blue: 75/255, alpha: 1).setStroke()
+        ring.stroke()
         NSGraphicsContext.restoreGraphicsState()
         let filename = "icon-\(size)@\(scale)x.png"
         try bitmap.representation(using: .png, properties: [:])!.write(to: destination.appendingPathComponent(filename))

@@ -21,6 +21,46 @@ struct EQPreset: Codable, Identifiable, Equatable {
     }
 }
 
+/// Factory curves recovered from Android 1.9.0. Values include native startup
+/// scaling and UI rounding; raw library values must be halved before rounding.
+/// These presets contain only preamp/bands, so selecting one preserves processing
+/// settings and does not change the saved-preset file format.
+struct FactoryEQPreset: Identifiable {
+    let id: Int // Stable Android factory index.
+    let name: String
+    let preamp: Double = 0
+    let bands: [Double]
+
+    private init(id: Int, name: String, bands: [Double]) {
+        self.id = id; self.name = name; self.bands = bands
+    }
+
+    static let all: [FactoryEQPreset] = [
+        .init(id: 0, name: "Acoustic", bands: [2.4, 2.3, 2.0, 0.2, 0.8, 0.7, 1.7, 1.8, 1.7, 0.8]),
+        .init(id: 1, name: "Bass Booster", bands: [2.7, 2.2, 1.6, 1.4, 0.6, 0.0, 0.0, 0.0, 0.0, 0.0]),
+        .init(id: 2, name: "Bass Reducer", bands: [-2.7, -2.2, -1.6, -1.4, -0.6, 0.0, 0.0, 0.0, 0.0, 0.0]),
+        .init(id: 3, name: "Classical", bands: [2.3, 1.9, 1.5, 1.2, -0.8, -0.8, 0.0, 1.5, 1.9, 2.3]),
+        .init(id: 4, name: "Dance", bands: [1.9, 3.2, 2.4, 0.0, 0.9, 1.6, 2.4, 2.2, 1.6, 0.0]),
+        .init(id: 5, name: "Deep", bands: [2.3, 1.8, 0.8, 0.4, 1.5, 1.3, 0.7, -1.3, -2.0, -2.4]),
+        .init(id: 6, name: "Electronic", bands: [2.1, 1.9, 0.6, 0.0, -0.6, 0.9, 0.2, 0.5, 1.9, 2.4]),
+        .init(id: 7, name: "Flat", bands: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+        .init(id: 8, name: "Hip-Hop", bands: [2.4, 2.1, 0.6, 1.4, -0.6, -0.6, 0.6, -0.5, 0.9, 1.4]),
+        .init(id: 9, name: "Jazz", bands: [1.9, 1.5, 0.7, 0.9, -0.7, -0.7, 0.0, 0.7, 1.5, 1.9]),
+        .init(id: 10, name: "Latin", bands: [2.2, 1.5, 0.0, 0.0, -0.8, -0.8, -0.8, 0.0, 1.5, 2.2]),
+        .init(id: 11, name: "Loudness", bands: [3.0, 1.9, 0.0, 0.0, -0.9, 0.0, -0.6, -2.5, 2.4, 0.6]),
+        .init(id: 12, name: "Lounge", bands: [-1.5, -0.8, -0.5, 0.7, 2.1, 1.0, 0.0, -0.8, 0.9, 0.5]),
+        .init(id: 13, name: "Piano", bands: [1.5, 0.9, 0.0, 0.9, 1.5, 0.7, 1.7, 2.2, 1.5, 1.7]),
+        .init(id: 14, name: "Pop", bands: [-0.8, -0.6, 0.0, 0.9, 2.0, 2.0, 0.9, 0.0, -0.6, -0.8]),
+        .init(id: 15, name: "R&B", bands: [1.4, 3.5, 2.9, 0.7, -1.2, -0.7, 1.2, 1.3, 1.5, 1.9]),
+        .init(id: 16, name: "Rock", bands: [2.5, 2.0, 1.5, 0.6, -0.3, -0.6, 0.1, 1.2, 1.7, 2.1]),
+        .init(id: 17, name: "Small Speakers", bands: [2.6, 2.1, 2.0, 1.1, 0.6, 0.0, -0.6, -1.1, -2.0, -2.2]),
+        .init(id: 18, name: "Spoken Word", bands: [-2.0, -0.5, 0.0, 0.5, 1.7, 2.3, 2.3, 2.2, 1.2, 0.0]),
+        .init(id: 19, name: "Treble Booster", bands: [0.0, 0.0, 0.0, 0.0, 0.0, 0.7, 1.0, 1.6, 2.2, 2.5]),
+        .init(id: 20, name: "Treble Reducer", bands: [0.0, 0.0, 0.0, 0.0, 0.0, -0.7, -1.0, -1.6, -2.2, -2.5]),
+        .init(id: 21, name: "Vocal Booster", bands: [-0.8, -1.5, -1.5, 0.7, 1.8, 1.8, 1.5, 0.7, 0.0, -0.8]),
+    ]
+}
+
 enum PresetError: LocalizedError {
     case invalid, tooLarge, unsupported, noPresets
     var errorDescription: String? {

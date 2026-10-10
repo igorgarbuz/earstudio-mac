@@ -171,7 +171,7 @@ private final class KeyStoreTestTransport: ControlTransport {
     var onOpen: (() -> Void)?
     var onData: ((Data) -> Void)?
     var onClose: (() -> Void)?
-    var onError: ((String) -> Void)?
+    var onError: ((TransportFailure) -> Void)?
     var onDiagnostic: ((String) -> Void)?
     var sent: [Data] = []
 
