@@ -96,6 +96,8 @@ swift test               # Headless protocol/core tests
 ./Tools/package.sh        # Universal archive, verified DMG and checksum
 ```
 
+`build.sh` defaults to `build` and does not create a DMG or increment the version. Update `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `Configuration/App.xcconfig` when preparing a new version. The build output prints the embedded app version.
+
 Generated apps, archives and logs go into the ignored build directory; DMGs and checksums go into the ignored dist directory. Local builds use ad-hoc signing and require no paid developer account. Apple Developer ID signing and notarization are separate distribution steps.
 
 The checked-in Xcode project is ready to open. The optional project generator is only needed after adding/removing files outside Xcode: run `python3 Tools/generate_project.py`. Build settings belong in the xcconfig files; regeneration replaces manual project/scheme edits.

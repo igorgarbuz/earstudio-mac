@@ -22,6 +22,23 @@ final class ConnectionLifecycleTests: XCTestCase {
         wait(for: [drained], timeout: 1)
     }
 
+    func testPairedDeviceInitializationLeavesMainRunLoopAvailable() {
+        let published = expectation(description: "Paired devices published")
+        let transport = BluetoothTransport(readPairedDevices: {
+            XCTAssertFalse(Thread.isMainThread)
+            // Model the coordinator waiting for work on the main queue.
+            DispatchQueue.main.sync {}
+            return []
+        })
+        transport.onDevices = { devices in
+            XCTAssertTrue(Thread.isMainThread)
+            XCTAssertTrue(devices.isEmpty)
+            published.fulfill()
+        }
+        transport.loadPaired()
+        wait(for: [published], timeout: 2)
+    }
+
     func testReconnectWaitsForOldControlChannelToClose() {
         let first = FakeControlTransport(), second = FakeControlTransport()
         var transports: [ControlTransport] = [first, second]
@@ -150,6 +167,42 @@ final class ConnectionLifecycleTests: XCTestCase {
         transport.close(); transport.rfcommChannelClosed(device.testChannel)
     }
 
+    func testMissingOpenCallbackRecognizesChannelOpeningAfterSDP() {
+        let device = BluetoothTestObjects.keep(FakeBluetoothDevice())
+        device.deliverOpenCallback = false
+        let transport = BluetoothTransport()
+        var opened = 0
+        transport.onOpen = { opened += 1 }
+        transport.connect(device)
+        XCTAssertEqual(device.queryCount, 1)
+        XCTAssertEqual(device.openCount, 1)
+        XCTAssertEqual(opened, 0)
+        device.testChannel.open = true
+        transport.checkOpeningProgress()
+        XCTAssertEqual(opened, 1)
+
+        // A late SDP callback must not start a second RFCOMM open.
+        transport.sdpQueryComplete(device, status: kIOReturnSuccess)
+        transport.checkOpeningProgress()
+        XCTAssertEqual(device.openCount, 1)
+        XCTAssertEqual(opened, 1)
+        transport.close(); transport.rfcommChannelClosed(device.testChannel)
+    }
+
+    func testFullSDPCompletesWhenFilteredSDPWouldNeverCallBack() {
+        let device = BluetoothTestObjects.keep(FakeBluetoothDevice())
+        device.hasCachedService = false
+        let transport = BluetoothTransport()
+        var opened = 0
+        transport.onOpen = { opened += 1 }
+        transport.connect(device)
+        drainMainQueue()
+        XCTAssertEqual(device.queryCount, 1)
+        XCTAssertEqual(device.openCount, 1)
+        XCTAssertEqual(opened, 1)
+        transport.close(); transport.rfcommChannelClosed(device.testChannel)
+    }
+
     func testExistingChannelAndDuplicateCallbackOnlyOpenOnce() {
         let device = BluetoothTestObjects.keep(FakeBluetoothDevice())
         device.testChannel.open = true
@@ -270,6 +323,39 @@ final class ConnectionLifecycleTests: XCTestCase {
         model.disconnect(); second.completeClose()
     }
 
+    func testBluetoothResetWaitsForObservedDisconnectBeforeReopening() {
+        let device = BluetoothTestObjects.keep(FakeResetDevice())
+        var waits = 0
+        let result = BluetoothLinkReset.reconnect(device) { _ in
+            waits += 1
+            XCTAssertEqual(device.openCount, 0)
+            if waits == 3 { device.connected = false }
+        }
+        XCTAssertEqual(result, 0)
+        XCTAssertEqual(waits, 3)
+        XCTAssertEqual(device.openCount, 1)
+    }
+
+    func testBluetoothResetDoesNotReopenWhenDisconnectNeverSettles() {
+        let device = BluetoothTestObjects.keep(FakeResetDevice())
+        var waits = 0
+        XCTAssertEqual(BluetoothLinkReset.reconnect(device) { _ in waits += 1 }, kIOReturnTimeout)
+        XCTAssertEqual(waits, 50)
+        XCTAssertEqual(device.openCount, 0)
+    }
+
+    func testBluetoothResetPropagatesCloseAndReopenErrors() {
+        let device = BluetoothTestObjects.keep(FakeResetDevice())
+        device.closeStatus = 913
+        XCTAssertEqual(BluetoothLinkReset.reconnect(device) { _ in XCTFail("Close failed") }, 913)
+        XCTAssertEqual(device.openCount, 0)
+        device.closeStatus = 0
+        device.connected = false
+        device.openStatus = 914
+        XCTAssertEqual(BluetoothLinkReset.reconnect(device) { _ in XCTFail("Already disconnected") }, 914)
+        XCTAssertEqual(device.openCount, 1)
+    }
+
     func testCancelBluetoothRecoveryNeverStartsAControlConnection() {
         let first = FakeControlTransport(), second = FakeControlTransport()
         var links: [ControlTransport] = [first, second]
@@ -336,25 +422,46 @@ final class ConnectionLifecycleTests: XCTestCase {
     }
 }
 
+private final class FakeResetDevice: IOBluetoothDevice {
+    var connected = true
+    var closeStatus: IOReturn = 0
+    var openStatus: IOReturn = 0
+    var openCount = 0
+    override func isConnected() -> Bool { connected }
+    override func closeConnection() -> IOReturn { closeStatus }
+    override func openConnection() -> IOReturn {
+        XCTAssertFalse(connected)
+        openCount += 1
+        return openStatus
+    }
+}
+
 private final class FakeBluetoothDevice: IOBluetoothDevice {
     let testChannel = FakeRFCOMMChannel()
     private let service = FakeSerialService()
     var openStatus: IOReturn = kIOReturnSuccess
     var deliverOpenCallback = true
+    var hasCachedService = true
+    var queryCount = 0
     var openCount = 0
 
     override var addressString: String! { nil }
 
     override func isConnected() -> Bool { true }
     override func performSDPQuery(_ target: Any!) -> IOReturn {
+        queryCount += 1
+        hasCachedService = true
         (target as? BluetoothTransport)?.sdpQueryComplete(self, status: kIOReturnSuccess)
         return kIOReturnSuccess
     }
     override func performSDPQuery(_ target: Any!, uuids uuidArray: [Any]!) -> IOReturn {
-        XCTAssertEqual(uuidArray.count, 2)
-        return performSDPQuery(target)
+        // Reproduce the macOS 15.7.9 behavior: accepts the filtered request,
+        // but never invokes sdpQueryComplete. Tests must use the full query.
+        return kIOReturnSuccess
     }
-    override func getServiceRecord(for sdpUUID: IOBluetoothSDPUUID!) -> IOBluetoothSDPServiceRecord! { service }
+    override func getServiceRecord(for sdpUUID: IOBluetoothSDPUUID!) -> IOBluetoothSDPServiceRecord! {
+        hasCachedService ? service : nil
+    }
     override func openRFCOMMChannelAsync(_ rfcommChannel: AutoreleasingUnsafeMutablePointer<IOBluetoothRFCOMMChannel?>!, withChannelID channelID: BluetoothRFCOMMChannelID, delegate channelDelegate: Any!) -> IOReturn {
         // Deliberately invoke the delegate before assigning the out parameter.
         openCount += 1

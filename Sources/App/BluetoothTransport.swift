@@ -3,6 +3,25 @@ import AppKit
 import Darwin
 import IOBluetooth
 
+enum BluetoothLinkReset {
+    /// Run off the main queue: macOS needs its event loop to update link state.
+    static func reconnect(_ device: IOBluetoothDevice,
+                          wait: (TimeInterval) -> Void = Thread.sleep(forTimeInterval:)) -> IOReturn {
+        let closed = device.closeConnection()
+        guard closed == kIOReturnSuccess else { return closed }
+        // On macOS 15 closeConnection can return success before isConnected
+        // changes. Reopening immediately can reuse the link being torn down.
+        for _ in 0..<50 {
+            if !device.isConnected() { break }
+            wait(0.1)
+        }
+        guard !device.isConnected() else { return kIOReturnTimeout }
+        // Re-establish the baseband link before querying the serial service;
+        // the ES100 can advertise a different RFCOMM channel after reconnect.
+        return device.openConnection()
+    }
+}
+
 /// macOS/ES100 support one owner of the serial control link. flock also releases
 /// ownership when a process crashes, unlike a persisted "connected" preference.
 final class ControlChannelLease {
@@ -59,11 +78,14 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
     var onError: ((String) -> Void)?
     var onDiagnostic: ((String) -> Void)?
     private var inquiry: IOBluetoothDeviceInquiry?
+    private var scanRequest = UUID()
+    private let readPairedDevices: () -> [IOBluetoothDevice]
     private var devices: [String: DiscoveredDevice] = [:]
     private var device: IOBluetoothDevice?
     private var channel: IOBluetoothRFCOMMChannel?
     private var closed = false
     private var openingTimer: Timer?
+    private var openingPollTimer: Timer?
     private var openingRFCOMM = false
     private var closing = false
     private var closeNotification: IOBluetoothUserNotification?
@@ -80,13 +102,37 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
     }
     private static var channelOwners: [ObjectIdentifier: WeakOwner] = [:]
 
-    func loadPaired() {
-        for device in IOBluetoothDevice.pairedDevices() as? [IOBluetoothDevice] ?? [] { add(device) }
-        publishDevices()
+    init(readPairedDevices: @escaping () -> [IOBluetoothDevice] = {
+        IOBluetoothDevice.pairedDevices() as? [IOBluetoothDevice] ?? []
+    }) {
+        self.readPairedDevices = readPairedDevices
+        super.init()
+    }
+
+    func loadPaired(completion: @escaping () -> Void = {}) {
+        // On macOS 15, the first pairedDevices call can wait for the Bluetooth
+        // coordinator to initialize. Keep the main run loop free to service it.
+        let read = readPairedDevices
+        DispatchQueue.global(qos: .userInitiated).async {
+            let paired = read()
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                for device in paired { self.add(device) }
+                self.publishDevices()
+                completion()
+            }
+        }
     }
     func scan() {
-        loadPaired()
         guard inquiry == nil else { return }
+        let request = UUID()
+        scanRequest = request
+        loadPaired { [weak self] in
+            guard let self, self.scanRequest == request, self.inquiry == nil else { return }
+            self.beginScan()
+        }
+    }
+    private func beginScan() {
         let scan = IOBluetoothDeviceInquiry(delegate: self)
         scan?.inquiryLength = 8
         scan?.updateNewDeviceNames = true
@@ -97,7 +143,7 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
             onScanFinished?(); return
         }
     }
-    func stopScan() { _ = inquiry?.stop(); inquiry = nil }
+    func stopScan() { scanRequest = UUID(); _ = inquiry?.stop(); inquiry = nil }
     private func add(_ device: IOBluetoothDevice) {
         let name = (device.name ?? "").lowercased()
         guard name.contains("earstudio") || name.contains("es100") else { return }
@@ -128,29 +174,52 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
                 fail("Another EarStudio Companion process owns the control channel, or its lock could not be opened. Quit the other copy and try again."); return
             }
         }
+        // On macOS 15.7.9 the UUID-filtered overload returns success without
+        // completing. The full query completes on the same device/session.
+        // Resolve our supported service UUIDs from its results below.
+        openingPollTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+            self?.checkOpeningProgress()
+        }
         onDiagnostic?("Discovering Bluetooth services. Mac link: \(target.isConnected() ? "connected" : "disconnected").")
+        startOpeningTimeout()
+        let status = target.performSDPQuery(self)
+        if status != kIOReturnSuccess { fail("Could not query the device's Bluetooth services (\(status)).") }
+    }
+    private func startOpeningTimeout() {
+        openingTimer?.invalidate()
         openingTimer = Timer.scheduledTimer(withTimeInterval: 20, repeats: false) { [weak self] _ in
             guard let self else { return }
             self.fail(self.openingRFCOMM
                 ? "The ES100 control channel did not open. Bluetooth audio can still be connected. Use Reconnect Bluetooth below to reset the device connection."
-                : "Bluetooth service discovery timed out. Keep ES100 nearby and check its connection in macOS Bluetooth settings.")
+                : "Bluetooth service discovery did not finish. Use Reconnect Bluetooth below to reset the EarStudio link.")
         }
-        let status = target.performSDPQuery(self, uuids: serviceUUIDs)
-        if status != kIOReturnSuccess { fail("Could not query the device's Bluetooth services (\(status)).") }
+    }
+    func checkOpeningProgress() {
+        guard !closed else { return }
+        if openingRFCOMM, let channel, channel.isOpen() {
+            onDiagnostic?("RFCOMM channel is open; macOS did not deliver an open callback.")
+            completeOpen(channel, status: kIOReturnSuccess)
+        }
     }
     func sdpQueryComplete(_ device: IOBluetoothDevice!, status: IOReturn) {
         guard !closed, !openingRFCOMM, channel == nil, device == self.device else { return }
         onDiagnostic?("Bluetooth service discovery completed (\(status)).")
         guard status == kIOReturnSuccess else { fail("Service discovery failed (\(status)). Try pairing ES100 in Bluetooth settings first."); return }
         onDiagnostic?("Service records updated: \(device.getLastServicesUpdate()?.description ?? "unknown").")
+        guard let channelID = serialChannelID(on: device) else {
+            fail("This device did not advertise the EarStudio serial control service. Try reconnecting after closing the phone app.")
+            return
+        }
+        openChannel(channelID, on: device)
+    }
+    private func serialChannelID(on device: IOBluetoothDevice) -> BluetoothRFCOMMChannelID? {
         for uuid in serviceUUIDs {
             guard let service = device.getServiceRecord(for: uuid) else { continue }
             var channelID: BluetoothRFCOMMChannelID = 0
             guard service.getRFCOMMChannelID(&channelID) == kIOReturnSuccess, channelID > 0 else { continue }
-            openChannel(channelID, on: device)
-            return
+            return channelID
         }
-        fail("This device did not advertise the EarStudio serial control service. Try reconnecting after closing the phone app.")
+        return nil
     }
     private var serviceUUIDs: [IOBluetoothSDPUUID] {
         let spp = IOBluetoothSDPUUID(uuid16: 0x1101)!
@@ -160,6 +229,7 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
     }
     private func openChannel(_ channelID: BluetoothRFCOMMChannelID, on device: IOBluetoothDevice) {
         openingRFCOMM = true
+        startOpeningTimeout()
         onDiagnostic?("Opening RFCOMM channel \(channelID).")
         // Do not pass a stored property inout while a delegate callback may run.
         var opened: IOBluetoothRFCOMMChannel?
@@ -207,6 +277,7 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
         guard error != kIOReturnSuccess || (rfcommChannel != nil && rfcommChannel == channel) else { return }
         openingRFCOMM = false
         openingTimer?.invalidate(); openingTimer = nil
+        openingPollTimer?.invalidate(); openingPollTimer = nil
         guard error == kIOReturnSuccess else {
             fail("The ES100 control channel could not reopen (Bluetooth error \(error)). Use Reconnect Bluetooth below to reset the device connection.")
             return
@@ -223,6 +294,7 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
         if closing { finishClose(); return }
         guard !closed else { return }
         closed = true; openingTimer?.invalidate(); openingTimer = nil
+        openingPollTimer?.invalidate(); openingPollTimer = nil
         finishClose(); onClose?()
     }
     func send(_ data: Data) -> Bool {
@@ -266,6 +338,7 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
         closeCompletions.append(completion)
         closing = true; closed = true; openingRFCOMM = false
         openingTimer?.invalidate(); openingTimer = nil; stopScan()
+        openingPollTimer?.invalidate(); openingPollTimer = nil
         guard let channel else { finishClose(); return }
         closeNotification = channel.register(forChannelCloseNotification: self, selector: #selector(channelDidClose(_:channel:)))
         let result = channel.close()
@@ -307,6 +380,7 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
     private func fail(_ message: String) { close(); onError?(message) }
     deinit {
         openingTimer?.invalidate()
+        openingPollTimer?.invalidate()
         closeNotification?.unregister()
         if let channel { detachIfOwned(channel); _ = channel.close() }
         for buffer in writeBuffers.values { buffer.deallocate() }

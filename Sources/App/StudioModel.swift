@@ -65,10 +65,10 @@ final class StudioModel: ObservableObject {
          readDeviceKey: @escaping (String) -> UInt16 = { DeviceKeyStore.shared.read($0) },
          forgetDeviceKey: @escaping (String) -> Bool = { DeviceKeyStore.shared.forget($0) },
          resetBluetooth: @escaping (IOBluetoothDevice, @escaping (IOReturn) -> Void) -> Void = { device, done in
-             // This SDK call is synchronous. Keep the main run loop available
-             // for Bluetooth callbacks and cancellation while it closes audio.
+             // Keep the main run loop available while the device disconnects
+             // and reconnects; the SDK updates link state asynchronously.
              DispatchQueue.global(qos: .userInitiated).async {
-                 let result = device.closeConnection()
+                 let result = BluetoothLinkReset.reconnect(device)
                  DispatchQueue.main.async { done(result) }
              }
          }) {

@@ -77,3 +77,45 @@ Final validation: **64 native Xcode tests and 28 Swift Package core tests passed
 A process-lifetime `flock` lease is acquired before normal app startup. A second copy activates the existing app and exits; disconnected and demo windows retain ownership too. Lock files are never unlinked while in use, and the OS releases the lease after exit or a crash. Failure to open the lock reports a startup error rather than launching an unprotected owner. Hosted XCTest bypasses normal startup ownership, while each test exercises the guard using an isolated lock file. The separate RFCOMM lease and older-copy check remain in the transport.
 
 Four additional native tests verify duplicate-startup activation/termination, retained ownership while disconnected, release with a stale lock file, and unavailable/symlink lock failures. These complement the existing connection cleanup and control-channel ownership tests.
+
+## Connection investigation on 2026-10-10
+
+### Confirmed cause of the reported discovery timeout
+
+The installed 1.0.7 app reproduced a 20-second service-discovery (SDP) timeout on macOS 15.7.9 (24G830), including an attempt whose diagnostics said the Mac link was connected. The system log confirms Bluetooth privacy approval before that attempt. Authentication storage is first read after RFCOMM opens, so the Keychain-to-local-file change cannot explain this pre-authentication timeout. The 1.0.6-to-1.0.7 diff did not change `BluetoothTransport`.
+
+A controlled API comparison against the same paired, connected ES100 isolated the discovery failure:
+
+- `performSDPQuery(target, uuids: serviceUUIDs)` returned success but never called `sdpQueryComplete`. An initial probe waited 65 seconds; a repeated probe using the exact compacted SPP/GAIA array also received no callback in 10 seconds.
+- `performSDPQuery(target)` returned success and invoked the completion with status 0 immediately (about 0.04 ms). This establishes completion, not that a new over-the-air refresh occurred; macOS may serve cached service information.
+- A final comparison in one process and the same device session ran full → filtered → full with the main dispatch queue free: both full queries completed with status 0 (about 0.02–0.08 ms); the filtered query returned 0 but had no callback within three seconds.
+- Git history shows the filtered overload replaced the full query in commit `0e05fa2`, which predates the local authorization-store release.
+
+The patch restores the full SDP query and still selects the SPP/GAIA service from the returned records. Its regression fake models the filtered API accepting a request without completing it, while the full API completes synchronously. Earlier cache-first experiments were removed once this comparison identified the failing overload.
+
+### Separate control-channel and permission findings
+
+macOS audio being connected does not establish that the app's RFCOMM control channel is usable. An initial cached record advertised channel 1. One direct probe observed `isOpen` become true without an open callback, but did not exchange authentication messages. Subsequent channel-1 opens stalled. The patch therefore also observes channel-open state while waiting for the callback, without authenticating twice.
+
+The in-app recovery called `closeConnection` successfully and Settings showed EarStudio disconnected. The running process nevertheless reported the old connected state and retried channel 1. After a manual device reconnect in Settings and a fresh app process, the cached channel was 14. At 12:47:58 local time, RFCOMM opened and the ES100 replied to authentication with `0302`, requesting a physical power-button press. No device settings were written. Physical confirmation was not completed before the three-minute timeout, so full readback and remembered authorization were not validated.
+
+A later channel-14 retry failed too: at 12:55:41, the Bluetooth daemon reported RFCOMM error 913 (`0x391`), while IOBluetooth logged a missing channel and did not deliver a usable failure completion to the app. This confirms an additional serial-link failure beyond the SDP bug; its OS/firmware trigger is not established. Similar reopen failures were documented in the earlier audit before version 1.0.7. An experimental explicit baseband reopen was removed because hardware validation did not establish that it fixes recovery.
+
+Switching between ad-hoc-signed builds also produced TCC code-requirement mismatches and permission prompts. The installed release's original mismatch was followed by `TCC is approved` before the reported timeout, so lack of permission does not explain that timeout. During later validation, a process sample showed `pairedDevices()` waiting inside the Bluetooth coordinator. Moving that synchronous initialization off the main queue keeps the interface responsive; it cannot resolve a pending system permission decision. A test verifies the main run loop remains available.
+
+### Validation boundary
+
+The universal Release build succeeds, and all **77 native tests pass with zero failures**. Native tests cover the full-query regression, missing open callbacks, and asynchronous paired-device loading, together with the existing connection/authentication/storage tests. Hardware probes verify the discovery API difference, and an earlier candidate exchanged real authentication messages after manual reconnect. The final build is not yet verified through physical authorization, full settings readback, and repeated reconnects. Changes remain local; the installed application and published release were not replaced.
+
+
+## Follow-up: version 1.0.8 recovery candidate
+
+After installing the first patch, the user reached RFCOMM rather than timing out in SDP. The 13:05:57 system log confirms Bluetooth permission was approved and channel 14 failed with daemon error 913. This verifies that the discovery change alone did not resolve the complete connection problem.
+
+A device-specific recovery probe reproduced `closeConnection()` returning success while `isConnected()` remained true. Immediately calling `openConnection()` also returned success, but RFCOMM remained closed. Waiting for the link to become disconnected before explicitly reopening it allowed RFCOMM to open in repeated probes; service channel numbers changed across these connections. A final probe polled the disconnected state at 100 ms intervals instead of using a fixed delay and also opened successfully. These probes did not send authentication or setting writes.
+
+The candidate's recovery now waits up to five seconds for the observed disconnection, propagates a timeout if it never happens, and explicitly reopens the baseband connection before the model performs full SDP and opens RFCOMM. Tests exercise delayed state changes, timeout without reopening, and propagation of close/open failures. Physical authentication and complete readback remain separate hardware validation gates.
+
+The candidate is version **1.0.8 (9)**. Build versions are configured in `Configuration/App.xcconfig`; ordinary builds do not increment them. `Tools/build.sh` now prints the embedded version and the packaging command. `Tools/package.sh` builds a universal archive, creates a drag-install DMG under `dist`, verifies it, and generates a SHA-256 checksum. `Tools/publish-release.sh` runs both suites, packages, uploads and verifies a draft, then publishes it. No GitHub release was published during this investigation.
+
+Validation of this follow-up: **80 native tests passed with zero failures**; the universal Release app reports 1.0.8 (9); `Tools/package.sh` produced and verified `dist/EarStudio-Companion-1.0.8-macOS-universal.dmg` and its checksum. The installed copy was not replaced by the agent. The final candidate's hardware UI run is waiting for renewed Bluetooth permission: TCC logged a code-requirement mismatch and `AUTHREQ_PROMPTING` for the local build. The computer-use tool refuses access to the system permission-dialog application, so user action is needed before continuing that run.

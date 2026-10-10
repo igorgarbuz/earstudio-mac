@@ -49,6 +49,12 @@ if ! xcodebuild -project "$project_root/EarStudioCompanion.xcodeproj" \
 fi
 printf 'Succeeded. Log: %s\n' "$log_path"
 case "$action" in
-    build) printf 'App: %s\n' "$project_root/build/Build/Products/Release/EarStudio Companion.app" ;;
+    build)
+        built_app="$project_root/build/Build/Products/Release/EarStudio Companion.app"
+        version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$built_app/Contents/Info.plist")
+        build_number=$(/usr/libexec/PlistBuddy -c 'Print CFBundleVersion' "$built_app/Contents/Info.plist")
+        printf 'App: %s\nVersion: %s (%s)\n' "$built_app" "$version" "$build_number"
+        printf 'To create a DMG: "%s/Tools/package.sh"\n' "$project_root"
+        ;;
     archive) printf 'Archive: %s\n' "$project_root/build/Archives/EarStudioCompanion.xcarchive" ;;
 esac
