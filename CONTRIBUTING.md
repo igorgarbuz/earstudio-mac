@@ -12,7 +12,7 @@ Inspect diagnostics and screenshots before posting. Remove device authentication
 
 ## Development setup
 
-Use macOS 14 or newer with a full Xcode installation. The project and CI use Xcode 26.3. Select the installation under **Xcode → Settings → Locations → Command Line Tools**. There are no third-party Swift package dependencies.
+To build and test with the project's tested toolchain, use macOS 15.6 or newer and a full Xcode 26.3 installation. The built app supports macOS 14 or newer. Select the installation under **Xcode → Settings → Locations → Command Line Tools**. There are no third-party Swift package dependencies.
 
 1. Fork the repository on GitHub.
 2. Clone your fork and create a branch for the change:
