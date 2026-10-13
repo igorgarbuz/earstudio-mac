@@ -112,7 +112,7 @@ The checked-in Xcode project is ready to open. The optional project generator is
 
 ## Publish a release
 
-Update the version and build number in **Configuration/App.xcconfig**, add version-specific notes under **Docs/Releases**, then commit and push to the repository’s default branch. With [GitHub CLI](https://cli.github.com/) installed and authenticated using `gh auth login`, run:
+Prepare a pull request updating the version and build number in **Configuration/App.xcconfig** and adding version-specific notes under **Docs/Releases**. After review, passing CI, and merging, switch to `main` in a clean local checkout and run `git pull --ff-only`. With [GitHub CLI](https://cli.github.com/) installed and authenticated using `gh auth login`, run:
 
 ```sh
 ./Tools/publish-release.sh --dry-run
@@ -120,6 +120,12 @@ Update the version and build number in **Configuration/App.xcconfig**, add versi
 ```
 
 The script requires a clean checkout whose commit matches the remote default branch. It refuses existing tags/releases, runs both test suites, builds and verifies a fresh universal DMG, and uploads the DMG and checksum to a draft release targeting that exact commit. It checks the uploaded assets before publishing. A failed upload leaves a draft for inspection; an existing release is never overwritten. An optional `--notes-file` selects a different release-notes file.
+
+## Contributing
+
+Bug reports, feature requests, documentation fixes, and focused pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the fork/PR workflow, development setup, and validation commands, and follow the [Code of Conduct](CODE_OF_CONDUCT.md). Igor (`@igorgarbuz`) reviews and merges contributions; changes to `main` go through PRs and CI.
+
+Report suspected vulnerabilities privately using [SECURITY.md](SECURITY.md). [Maintainer guidance](Docs/Maintaining.md) documents branch protections, repository settings, and the release process.
 
 ## Project and protocol documentation
 
