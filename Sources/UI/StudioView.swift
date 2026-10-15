@@ -73,7 +73,7 @@ struct StudioView: View {
                     .frame(width: 31, height: 31)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("earstudio").font(.system(size: 21, weight: .medium)).tracking(-0.6)
+                    Text("EarStudio").font(.system(size: 21, weight: .medium)).tracking(-0.6)
                     Text("COMPANION").font(.system(size: 8, weight: .medium)).tracking(2.7).foregroundStyle(StudioTheme.secondary)
                 }
             }.padding(.horizontal, 23).padding(.top, 50).padding(.bottom, 36)
@@ -193,8 +193,8 @@ struct StudioView: View {
                 VStack(alignment: .trailing, spacing: 5) {
                     Text(model.isDemo ? "PREVIEW" : (model.pendingCount > 0 ? "SYNCING" : (model.canEdit ? "DEVICE SYNCED" : "OFFLINE")))
                         .font(.system(size: 8, weight: .medium)).tracking(0.8).foregroundStyle(StudioTheme.secondary)
-                    Text(model.canEdit ? model.state.inputName : "ES100 / MK2").font(.system(size: 10))
-                }.frame(width: 92, alignment: .trailing)
+                    AudioInputStatus(state: model.canEdit ? model.state : nil)
+                }.frame(width: 190, alignment: .trailing)
             }.padding(.horizontal, 28).padding(.vertical, 20)
         }.background(StudioTheme.sidebar)
     }

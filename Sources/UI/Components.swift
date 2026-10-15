@@ -100,6 +100,63 @@ struct StatusPill: View {
     }
 }
 
+struct AudioInputStatus: View {
+    let state: DeviceState?
+
+    private var activeSlot: Int? {
+        guard let input = state?.input, input == 2 || input == 3 else { return nil }
+        return input - 1
+    }
+    private var detail: String {
+        if let activeSlot { return "Source \(activeSlot) is active" }
+        switch state?.input {
+        case nil: return "No device connected"
+        case 0: return "No active audio input"
+        case 1: return "Audio over USB"
+        default: return "Audio input unavailable"
+        }
+    }
+    private var help: String {
+        if let activeSlot {
+            return "ES100 has two Bluetooth source slots. Slot \(activeSlot) is the active audio input. The other slot may still be connected. These indicators show status; change playback on the source device to switch inputs."
+        }
+        return detail
+    }
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 5) {
+            HStack(spacing: 8) {
+                if let activeSlot {
+                    if let icon = NSImage(named: NSImage.bluetoothTemplateName) {
+                        Image(nsImage: icon).resizable().scaledToFit().frame(width: 12, height: 16)
+                            .foregroundStyle(StudioTheme.secondary)
+                    }
+                    Text("Bluetooth")
+                    HStack(spacing: 4) {
+                        ForEach(1...2, id: \.self) { slot in
+                            HStack(spacing: 3) {
+                                if slot == activeSlot { Image(systemName: "checkmark").font(.system(size: 9, weight: .semibold)) }
+                                Text("\(slot)").monospacedDigit()
+                            }
+                            .font(.system(size: 11, weight: .medium))
+                            .frame(width: slot == activeSlot ? 32 : 24, height: 24)
+                            .foregroundStyle(slot == activeSlot ? StudioTheme.green : StudioTheme.secondary)
+                            .background(slot == activeSlot ? StudioTheme.green.opacity(0.12) : .white.opacity(0.04), in: RoundedRectangle(cornerRadius: 6))
+                        }
+                    }
+                } else {
+                    Text(state?.inputName ?? "ES100 / MK2")
+                }
+            }.font(.system(size: 12, weight: .medium)).frame(height: 24)
+            Text(detail).font(.system(size: 10)).foregroundStyle(StudioTheme.secondary)
+        }
+        .fixedSize()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(activeSlot == nil ? "\(state?.inputName ?? "ES100 / MK2"). \(detail)" : "Bluetooth. \(detail)")
+        .help(help)
+    }
+}
+
 struct Metric: View {
     let label: String
     let value: String

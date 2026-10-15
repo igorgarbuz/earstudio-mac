@@ -41,9 +41,11 @@ Each release includes a SHA-256 checksum. Download it beside the DMG and run `sh
 
 ## Connect your EarStudio
 
-1. Turn on your ES100/MK2 and pair it in **System Settings → Bluetooth**.
-2. Allow the app Bluetooth access when prompted, choose **Connect**, and select your EarStudio.
-3. If device authorization is requested, briefly press its power button within three minutes. The app remembers that authorization locally for future connections; no Keychain password is needed.
+**Pair your ES100/MK2 with this Mac in macOS Bluetooth settings before choosing Connect in EarStudio Companion.** Pairing with a phone or another computer does not pair it with your Mac. The companion controls settings over Bluetooth, including when you use USB for audio; connecting a USB cable alone is not enough.
+
+1. Turn on your ES100/MK2, put it in Bluetooth pairing mode if needed, and pair it with your Mac in **System Settings → Bluetooth**. If it is already paired with this Mac, skip this step.
+2. Open **EarStudio Companion**, allow Bluetooth access when prompted, choose **Connect**, and select your EarStudio.
+3. If device authorization is requested, briefly press its power button within three minutes. This authorizes the companion app separately from macOS Bluetooth pairing. The app remembers that authorization locally for future connections; no Keychain password is needed.
 4. Wait for settings to load before editing. To play Mac audio through EarStudio, select it separately in macOS Sound settings.
 
 The app starts disconnected and sends no settings on startup. The bordered **Try demo** button, captioned **Explore without a device**, lets you explore sample settings; it appears only when disconnected. An active demo is labeled **DEMO · NO DEVICE**, with an **Exit demo** button. Only one app process can run at a time: opening another copy brings the existing app forward. Close other EarStudio controllers before connecting.
