@@ -16,7 +16,7 @@ final class IOSStudioModel: NSObject, ObservableObject, CBCentralManagerDelegate
     @Published private(set) var devices: [IOSDevice] = []
     @Published private(set) var scanning = false
     @Published var connectionMessage: String?
-    static let compatibilityNotice = "The iPhone Bluetooth connection is experimental and still needs testing with a physical ES100."
+    static let compatibilityNotice = "Turn on your EarStudio and keep it nearby. Close other controller apps before connecting."
     private var central: CBCentralManager?
     private var scanRequested = false
     private var scanDeadline: Timer?

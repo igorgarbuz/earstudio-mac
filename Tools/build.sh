@@ -64,7 +64,7 @@ printf 'Xcode %s (%s)…\n' "$action" "$configuration"
 if ! xcodebuild -project "$project_root/EarStudioCompanion.xcodeproj" \
     -scheme EarStudioCompanion -configuration "$configuration" \
     -destination "$destination" -derivedDataPath "$project_root/build" \
-    "${signing_args[@]}" "${metadata_args[@]}" "${action_args[@]}" >"$log_path" 2>&1; then
+    "${signing_args[@]}" ${metadata_args[@]+"${metadata_args[@]}"} "${action_args[@]}" >"$log_path" 2>&1; then
     tail -n 80 "$log_path" >&2
     printf '\nFull log: %s\n' "$log_path" >&2
     exit 1

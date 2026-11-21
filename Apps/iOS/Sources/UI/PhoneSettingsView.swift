@@ -239,6 +239,13 @@ private struct PhoneDiagnosticsView: View {
                 }
             } header: { Text("Connection log") } footer: { Text("Device authorization keys are excluded from diagnostics.") }
             Section {
+                NavigationLink("Privacy policy") {
+                    ScrollView {
+                        Text("EarStudio Companion does not collect data or send analytics to the developer. Bluetooth is used to discover and control your EarStudio. Presets and preferences remain on your iPhone; device authorization is stored in the iOS Keychain. Diagnostics leave the app only when you choose Share diagnostics. Files you export and links you open are handled by the destination app or service, under its privacy policy. Device backups may include app data according to your Apple settings. For privacy questions, contact the maintainer through the project’s GitHub page.")
+                            .padding()
+                    }
+                    .navigationTitle("Privacy policy")
+                }
                 AboutFooter()
             }
         }

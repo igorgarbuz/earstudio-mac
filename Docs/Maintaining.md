@@ -57,8 +57,7 @@ releases retain their historical signing status until a new release is made.
 
 These scripts do **not** submit to Apple's notary service or staple a ticket.
 Developer ID signing and notarization are separate; a signed DMG is not a claim
-that Gatekeeper accepts a downloaded release without notarization. No new release
-has been published as part of this tooling change.
+that Gatekeeper accepts a downloaded release without notarization. Version 1.0.11 introduces Developer ID signing for the public app and DMG.
 
 For iPhone development signing and direct installation, use
 `Tools/install-ios.sh`; see [iPhone instructions](iOS.md#install-from-terminal).

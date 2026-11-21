@@ -25,7 +25,7 @@ def make_project():
         refs.append(ref)
         folder = "Sources" if is_app else ("UITests" if is_ui else "Tests")
         files = sorted(p for p in g.FILE_REFS if p.startswith(f"Apps/iOS/{folder}/") and p.endswith(".swift"))
-        phases = [g.phase(key+"-sources", "PBXSourcesBuildPhase", files), g.phase(key+"-frameworks", "PBXFrameworksBuildPhase", []), g.phase(key+"-resources", "PBXResourcesBuildPhase", ["Apps/iOS/Resources/Assets.xcassets"] if is_app else [])]
+        phases = [g.phase(key+"-sources", "PBXSourcesBuildPhase", files), g.phase(key+"-frameworks", "PBXFrameworksBuildPhase", []), g.phase(key+"-resources", "PBXResourcesBuildPhase", ["Apps/iOS/Resources/Assets.xcassets", "Apps/iOS/Resources/PrivacyInfo.xcprivacy"] if is_app else [])]
         if not is_ui:
             g.OBJECTS[phases[1]]["files"] = [g.add(key+"-link-kit", isa="PBXBuildFile", productRef=product)]
         deps = []

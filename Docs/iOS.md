@@ -168,10 +168,12 @@ bounded queue; an ATT completion never substitutes for firmware readback.
 Unknown services, unsupported properties, malformed replies and timed-out writes
 fail explicitly. It never sends settings to arbitrary writable characteristics.
 
-These references establish **generic GAIA BLE**, not that every ES100 firmware
-exposes it or that the original iOS app uses identical authentication. The app
-labels iPhone connection support experimental. A real ES100 must still confirm
-service discovery, first authorization, saved-token reconnect, all required
-readbacks, a small EQ change, disconnect and background interruption before this
-can be described as a validated hardware companion. Simulator tests cannot supply
-that evidence. No vendor source code is bundled in this implementation.
+These references establish **generic GAIA BLE**. The maintainer has confirmed
+successful operation on a physical iPhone with EarStudio hardware. This does not
+establish compatibility with every ES100/MK2 firmware version. Record iPhone,
+iOS and firmware versions when extending hardware coverage; verify discovery,
+authorization, saved-token reconnect, settings readback, EQ changes and recovery.
+Simulator tests complement physical testing. No vendor source code is bundled
+in this implementation.
+
+See [App Store preparation](AppStore.md) for signed archive and export commands.

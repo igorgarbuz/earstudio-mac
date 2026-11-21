@@ -66,11 +66,18 @@
 			path = "Info.plist";
 			sourceTree = "<group>";
 		};
+		3C928373D55AA385919F78B1 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text";
+			path = "PrivacyInfo.xcprivacy";
+			sourceTree = "<group>";
+		};
 		637C336FB5F2FB70A3B1BA8F = {
 			isa = "PBXGroup";
 			children = (
 				"61474650B3144FE57910AEAE",
 				"BB308A788205B3617C2D2049",
+				"3C928373D55AA385919F78B1",
 			);
 			path = "Resources";
 			sourceTree = "<group>";
@@ -222,10 +229,17 @@
 			path = "test_apple_tools.py";
 			sourceTree = "<group>";
 		};
+		B8F51E1A77172D7478285BE3 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.script.python";
+			path = "test_build_metadata.py";
+			sourceTree = "<group>";
+		};
 		72229507E69B070DA84DE471 = {
 			isa = "PBXGroup";
 			children = (
 				"8C62697F74151F2F921FBF65",
+				"B8F51E1A77172D7478285BE3",
 			);
 			path = "tests";
 			sourceTree = "<group>";
@@ -234,6 +248,12 @@
 			isa = "PBXFileReference";
 			lastKnownFileType = "text.script.python";
 			path = "apple_signing.py";
+			sourceTree = "<group>";
+		};
+		E10D039439DB4085080F5042 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.script.sh";
+			path = "archive-ios.sh";
 			sourceTree = "<group>";
 		};
 		8D85038AC96A95B9EE4B1388 = {
@@ -246,6 +266,12 @@
 			isa = "PBXFileReference";
 			lastKnownFileType = "text.script.sh";
 			path = "build.sh";
+			sourceTree = "<group>";
+		};
+		2C1FA634A19BEB85286FD69F = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.script.python";
+			path = "build_metadata.py";
 			sourceTree = "<group>";
 		};
 		9001B18D152B4AEAF9E18323 = {
@@ -301,8 +327,10 @@
 			children = (
 				"72229507E69B070DA84DE471",
 				"BADB19582B866127A51DE30F",
+				"E10D039439DB4085080F5042",
 				"8D85038AC96A95B9EE4B1388",
 				"FD2BD9D4AD9DEA3C1FABD76E",
+				"2C1FA634A19BEB85286FD69F",
 				"9001B18D152B4AEAF9E18323",
 				"D3BAF805714448A753FE4AC3",
 				"0BDEB4BAD732AD9854B0DD21",
@@ -393,11 +421,16 @@
 			isa = "PBXBuildFile";
 			fileRef = "61474650B3144FE57910AEAE";
 		};
+		CE78E11A69C39C760AF228C6 = {
+			isa = "PBXBuildFile";
+			fileRef = "3C928373D55AA385919F78B1";
+		};
 		6CE5589B3376C12CA2850F4E = {
 			isa = "PBXResourcesBuildPhase";
 			buildActionMask = 2147483647;
 			files = (
 				"E298AE5CE95490D3401FE700",
+				"CE78E11A69C39C760AF228C6",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -26,7 +26,7 @@ This is an early community release, unaffiliated with Radsone. Physical testing 
 
 ### First launch on macOS
 
-Browser downloads receive macOS’s quarantine marker, which triggers Gatekeeper’s security checks. The current release is **ad-hoc signed and not notarized by Apple**, so the downloaded app may show **“EarStudio Companion.app” Not Opened** and say Apple could not verify it is free of malware. A locally generated copy may open without this download warning.
+Browser downloads receive macOS’s quarantine marker, which triggers Gatekeeper’s security checks. The current release is **Developer ID signed and not notarized by Apple**, so the downloaded app may show **“EarStudio Companion.app” Not Opened** and say Apple could not verify it is free of malware. A locally generated copy may open without this download warning.
 
 For the copy you intentionally downloaded from this project’s GitHub Releases:
 
@@ -77,7 +77,7 @@ Controls follow recovered firmware version gates and require their settings to h
 
 The EQ matches the Android app’s **graphic equalizer**: fixed center frequencies and two Q options. It does not provide arbitrary parametric bands. The plotted curve estimates the response; the ES100 processes the audio. USB-format and hands-free-profile changes require restarting the device.
 
-Firmware flashing, factory reset, device renaming and playback transport controls are not included. A development iPhone companion now lives in this repository; its Bluetooth hardware compatibility is still experimental. See [iPhone development](Docs/iOS.md).
+Firmware flashing, factory reset, device renaming and playback transport controls are not included. An iPhone companion is also included and has been tested successfully on a physical iPhone with EarStudio hardware. See [iPhone development](Docs/iOS.md).
 
 ## Preset compatibility
 
@@ -133,7 +133,7 @@ Report suspected vulnerabilities privately using [SECURITY.md](SECURITY.md). [Ma
 
 ## Project and protocol documentation
 
-The repository contains the shipping macOS app and a development iPhone companion, both using the local `Packages/EarStudioKit` Swift package. `EarStudioCompanion.xcodeproj` remains the macOS entry point. Platform code and signing configuration live under `Apps/macOS`; `Apps/iOS` contains the iPhone app, with its own `EarStudioiOS.xcodeproj` entry point and simulator UI tests. See [iPhone development](Docs/iOS.md) for build instructions and hardware validation limits.
+The repository contains the shipping macOS app and an iPhone companion, both using the local `Packages/EarStudioKit` Swift package. `EarStudioCompanion.xcodeproj` remains the macOS entry point. Platform code and signing configuration live under `Apps/macOS`; `Apps/iOS` contains the iPhone app, with its own `EarStudioiOS.xcodeproj` entry point and simulator UI tests. See [iPhone development](Docs/iOS.md) for build instructions and hardware validation limits.
 
 `EarStudioCore` owns the protocol, settings and presets. `EarStudioSession` owns authentication, command scheduling and readback reconciliation behind an injected transport. `EarStudioUI` provides shared bindings, theme, product image and EQ chart; `EarStudioAssets` owns the resource bundle. Shared tests run through SwiftPM, and native integration tests run through Xcode. See [Architecture](Docs/Architecture.md) for ownership, dependency rules and platform adapters.
 
