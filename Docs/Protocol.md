@@ -230,7 +230,7 @@ Validation on 2026-10-07: version 1.0.4 passed 21 core tests and all 36 native X
 
 ## Fixtures and further validation
 
-Synthetic fixtures in `Tests/ProtocolTests.swift` include:
+Synthetic fixtures in `Packages/EarStudioKit/Tests/EarStudioCoreTests/ProtocolTests.swift` include:
 
 ```text
 Authenticate with synthetic key 0x1234:
@@ -248,7 +248,7 @@ FF 01 00 02 A5 5A 01 43 08 15
 
 The historical source baseline had twelve protocol/preset tests. Version 1.0.3 passed 19 core tests and 29 native Xcode tests on 2026-10-07, covering protocol fixtures, stream boundaries, corruption, signed units, packed state, truncation, firmware gates, queue coalescing, presets, microphone mapping, connection lifecycle and EQ synchronization. The native EQ tests drive all ten slider bindings against a simulated device, check untouched neighbors, and preserve rapid edits across earlier readbacks without write ACKs. These constructed fixtures are not archived device captures. Small 4 kHz/8 kHz drags were also checked in demo mode; the corrected band mapping still needs physical ES100 validation.
 
-Further recorded validation should cover service/channel selection, initial firmware information, first/subsequent authentication, status/layout variants, small downward volume/mute/EQ changes with readback, reconnect, persistence through restart and firmware versions across ES100/MK2. Firmware flashing, factory reset, renaming and iOS transport remain outside the implemented interface.
+Further recorded validation should cover service/channel selection, initial firmware information, first/subsequent authentication, status/layout variants, small downward volume/mute/EQ changes with readback, reconnect, persistence through restart and firmware versions across ES100/MK2. Firmware flashing, factory reset and renaming remain outside the implemented interface. The experimental iOS GAIA BLE adapter and its separate evidence/validation limits are documented in [iPhone development](iOS.md).
 
 ## All-control audit in 1.0.5
 

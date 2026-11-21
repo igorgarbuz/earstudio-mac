@@ -1,0 +1,9 @@
+#include "Base.xcconfig"
+CODE_SIGN_IDENTITY = Developer ID Application
+OTHER_CODE_SIGN_FLAGS = $(inherited) --timestamp
+
+SWIFT_OPTIMIZATION_LEVEL = -O
+SWIFT_COMPILATION_MODE = wholemodule
+DEBUG_INFORMATION_FORMAT = dwarf-with-dsym
+ONLY_ACTIVE_ARCH = NO
+ARCHS = arm64 x86_64

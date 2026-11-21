@@ -28,14 +28,27 @@ To build and test with the project's tested toolchain, use macOS 15.6 or newer a
 From the repository root, the CI-equivalent commands are:
 
 ```sh
-swift test
+swift test --package-path Packages/EarStudioKit
 ./Tools/build.sh test
-./Tools/build.sh build
+./Tools/build.sh build --ad-hoc
+./Tools/build-ios.sh build
+./Tools/build-ios.sh test
 ```
 
-`swift test` runs headless protocol/core tests. The Xcode suite also covers app-specific behavior with simulated transports, and the Release build includes Apple Silicon and Intel architectures. Build scripts use local ad-hoc signing; no developer account, signing certificate, or API credentials are needed. Generated outputs stay in the ignored `.build/`, `build/`, and `dist/` directories.
+`swift test --package-path Packages/EarStudioKit` runs headless protocol, session and control-binding tests. The Xcode suite covers macOS integration and connection lifecycle with simulated transports, and the Release build includes Apple Silicon and Intel architectures. Tests and the explicit `--ad-hoc` CI build need no developer account or signing certificate. Default macOS Release builds and archives require Developer ID Application signing; see [signing setup](Docs/Maintaining.md#signing-local-builds). Generated outputs stay in the ignored `.build/`, `build/`, and `dist/` directories.
 
-The checked-in Xcode project is ready to use. If you add or remove source files outside Xcode, run `python3 Tools/generate_project.py` and review the generated project changes. Keep build settings in `Configuration/*.xcconfig` because regeneration replaces manual project/scheme edits.
+Run `python3 -m unittest discover -s Tools/tests -v` when changing device installation or signing tooling. These tests use synthetic device/certificate data and do not sign or install apps on a phone.
+
+The checked-in Xcode project is ready to use. If you add or remove source files outside Xcode, run `python3 Tools/generate_project.py` and review the generated project changes. Keep build settings in `Apps/macOS/Configuration/*.xcconfig` because regeneration replaces manual project/scheme edits.
+
+## UI development without hardware
+
+Both apps accept `--demo` as a launch argument in **Debug builds only**. In Xcode,
+add it under **Edit Scheme → Run → Arguments → Arguments Passed On Launch**.
+This loads editable sample device state without Bluetooth; the status identifies
+demo mode. There are no demo buttons or menus. Relaunch without the flag to return
+to normal operation. Release builds ignore `--demo`. The iPhone UI tests pass it
+automatically, and session tests can still construct `DeviceSession(demo: true)`.
 
 ## Preparing a pull request
 
@@ -58,3 +71,9 @@ Igor (`@igorgarbuz`) is the maintainer and code owner for all files. Contributio
 Maintainer-authored PRs still go through CI and a PR. GitHub does not allow authors to approve their own PRs, so the maintainer has a PR-only bypass of the review ruleset. See [Docs/Maintaining.md](Docs/Maintaining.md) for the settings and release process.
 
 Please follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Code ownership and sharing
+
+Read [Architecture](Docs/Architecture.md) before adding shared or platform-specific code. Put shared behavior in the appropriate package module, never add package source files to an app target, and load shared imagery through `EarStudioAssets.bundle`. Keep desktop navigation and Bluetooth APIs under `Apps/macOS`. The iOS package compile check does not validate a real iPhone connection.
+
+For iPhone work, see [iOS development](Docs/iOS.md). Regenerate `EarStudioiOS.xcodeproj` with `python3 Tools/generate_ios_project.py` when adding app/test sources. Run `./Tools/build-ios.sh test` on a compact and a larger iPhone simulator before claiming UI compatibility.

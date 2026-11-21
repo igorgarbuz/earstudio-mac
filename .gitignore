@@ -7,3 +7,6 @@ xcuserdata/
 .DS_Store
 __pycache__/
 *.pyc
+
+# Local reserved build numbers survive build-directory cleanup.
+.build-metadata/
