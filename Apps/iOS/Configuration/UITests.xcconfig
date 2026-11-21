@@ -1,0 +1,5 @@
+PRODUCT_NAME = EarStudioIOSUITests
+PRODUCT_BUNDLE_IDENTIFIER = com.igor.earstudio-companion.ios.uitests
+GENERATE_INFOPLIST_FILE = YES
+TEST_TARGET_NAME = EarStudioiOS
+SKIP_INSTALL = YES

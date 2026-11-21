@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the checked-in native Xcode project using Python's standard library.
 
-Build settings live in Configuration/*.xcconfig. Xcode is the build system;
+Build settings live in Apps/macOS/Configuration/*.xcconfig. Xcode is the build system;
 this helper is needed only after adding/removing files outside Xcode. Regeneration
 replaces project/scheme edits but preserves source, xcconfig, and user settings.
 """
@@ -84,40 +84,51 @@ def configurations(key, file_for_mode):
 
 
 def make_project():
-    groups = [folder_group(ROOT / name) for name in ("Sources", "Tests", "Resources", "Configuration", "Tools")]
-    documents = [file_reference(ROOT / name) for name in ("README.md", "LICENSE", "Package.swift")]
+    groups = [folder_group(ROOT / name) for name in ("Apps", "Tools")]
+    documents = [file_reference(ROOT / name) for name in ("README.md", "LICENSE")]
     app_product = add("app-product", isa="PBXFileReference", explicitFileType="wrapper.application",
                       path="EarStudio Companion.app", sourceTree="BUILT_PRODUCTS_DIR")
     test_product = add("test-product", isa="PBXFileReference", explicitFileType="wrapper.cfbundle",
                        path="EarStudioCompanionTests.xctest", sourceTree="BUILT_PRODUCTS_DIR")
     products = add("products", isa="PBXGroup", children=[app_product, test_product], name="Products", sourceTree="<group>")
     main = add("main", isa="PBXGroup", children=groups + documents + [products], sourceTree="<group>")
-    project_configs = configurations("project", lambda mode: f"Configuration/{mode}.xcconfig")
-    app_configs = configurations("app", lambda _: "Configuration/App.xcconfig")
-    test_configs = configurations("test", lambda _: "Configuration/Tests.xcconfig")
-    source_files = sorted(p for p in FILE_REFS if p.startswith("Sources/") and p.endswith(".swift"))
-    test_files = sorted(p for p in FILE_REFS if p.startswith("Tests/") and p.endswith(".swift"))
+    project_configs = configurations("project", lambda mode: f"Apps/macOS/Configuration/{mode}.xcconfig")
+    app_configs = configurations("app", lambda _: "Apps/macOS/Configuration/App.xcconfig")
+    test_configs = configurations("test", lambda _: "Apps/macOS/Configuration/Tests.xcconfig")
+    source_files = sorted(p for p in FILE_REFS if p.startswith("Apps/macOS/Sources/") and p.endswith(".swift"))
+    test_files = sorted(p for p in FILE_REFS if p.startswith("Apps/macOS/Tests/") and p.endswith(".swift"))
+    # Shared production sources are compiled only by SwiftPM.
+    package = add("earstudio-kit", isa="XCLocalSwiftPackageReference", relativePath="Packages/EarStudioKit")
+    package_products = []
+    for product_name in ("EarStudioKit",):
+        package_products.append(add("package-" + product_name, isa="XCSwiftPackageProductDependency",
+                                    productName=product_name))
     app_phases = [phase("app-sources", "PBXSourcesBuildPhase", source_files),
                   phase("app-frameworks", "PBXFrameworksBuildPhase", []),
-                  phase("app-resources", "PBXResourcesBuildPhase", ["Resources/Assets.xcassets", "LICENSE"])]
+                  phase("app-resources", "PBXResourcesBuildPhase", ["Apps/macOS/Resources/Assets.xcassets", "LICENSE"])]
     test_phases = [phase("test-sources", "PBXSourcesBuildPhase", test_files),
                    phase("test-frameworks", "PBXFrameworksBuildPhase", []),
                    phase("test-resources", "PBXResourcesBuildPhase", [])]
+    for target_name, framework_phase in (("app", app_phases[1]), ("test", test_phases[1])):
+        OBJECTS[framework_phase]["files"] = [
+            add(target_name + "-link-" + product, isa="PBXBuildFile", productRef=product)
+            for product in package_products
+        ]
     proxy = add("proxy", isa="PBXContainerItemProxy", containerPortal=identifier("project"), proxyType=1,
                 remoteGlobalIDString=identifier("app"), remoteInfo="EarStudioCompanion")
     dependency = add("test-dep", isa="PBXTargetDependency", target=identifier("app"), targetProxy=proxy)
     app = add("app", isa="PBXNativeTarget", buildConfigurationList=app_configs, buildPhases=app_phases,
-              buildRules=[], dependencies=[], name="EarStudioCompanion", productName="EarStudio Companion",
+              buildRules=[], dependencies=[], packageProductDependencies=package_products, name="EarStudioCompanion", productName="EarStudio Companion",
               productReference=app_product, productType="com.apple.product-type.application")
     test = add("test", isa="PBXNativeTarget", buildConfigurationList=test_configs, buildPhases=test_phases,
-               buildRules=[], dependencies=[dependency], name="EarStudioCompanionTests",
+               buildRules=[], dependencies=[dependency], packageProductDependencies=package_products, name="EarStudioCompanionTests",
                productName="EarStudioCompanionTests", productReference=test_product,
                productType="com.apple.product-type.bundle.unit-test")
     project = add("project", isa="PBXProject", attributes={"LastUpgradeCheck": "2630", "BuildIndependentTargetsInParallel": "YES",
                   "TargetAttributes": {app: {"CreatedOnToolsVersion": "26.3"}, test: {"CreatedOnToolsVersion": "26.3", "TestTargetID": app}}},
                   buildConfigurationList=project_configs, compatibilityVersion="Xcode 14.0", developmentRegion="en",
                   knownRegions=["en", "Base"], mainGroup=main, productRefGroup=products,
-                  projectDirPath="", projectRoot="", targets=[app, test])
+                  projectDirPath="", projectRoot="", packageReferences=[package], targets=[app, test])
     PROJECT.mkdir(exist_ok=True)
     content = {"archiveVersion": 1, "classes": {}, "objectVersion": 56, "objects": OBJECTS, "rootObject": project}
     (PROJECT / "project.pbxproj").write_text("// !$*UTF8*$!\n" + render(content) + "\n")

@@ -5,224 +5,438 @@
 	};
 	objectVersion = 56;
 	objects = {
-		F63F2D9A4B757C6F2F625982 = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "sourcecode.swift";
-			path = "AppMetadata.swift";
-			sourceTree = "<group>";
-		};
-		96028A2AE35C94731ECDEFA0 = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "sourcecode.swift";
-			path = "BluetoothTransport.swift";
-			sourceTree = "<group>";
-		};
-		D9A002130F84E647DD51CC50 = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "sourcecode.swift";
-			path = "DeviceKeyStore.swift";
-			sourceTree = "<group>";
-		};
-		08B162158FCD1CCB19FDD8FA = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "sourcecode.swift";
-			path = "EarStudioApp.swift";
-			sourceTree = "<group>";
-		};
-		70CC2D0BC58D90C86CE8D3A4 = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "sourcecode.swift";
-			path = "StudioModel.swift";
-			sourceTree = "<group>";
-		};
-		C8C9E2346A3749161BDD6741 = {
-			isa = "PBXGroup";
-			children = (
-				"F63F2D9A4B757C6F2F625982",
-				"96028A2AE35C94731ECDEFA0",
-				"D9A002130F84E647DD51CC50",
-				"08B162158FCD1CCB19FDD8FA",
-				"70CC2D0BC58D90C86CE8D3A4",
-			);
-			path = "App";
-			sourceTree = "<group>";
-		};
-		627A9253D3D5554FB35033F6 = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "sourcecode.swift";
-			path = "DeviceState.swift";
-			sourceTree = "<group>";
-		};
-		BE64A1A7624A9F059D52A983 = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "sourcecode.swift";
-			path = "EQPreset.swift";
-			sourceTree = "<group>";
-		};
-		DF45101585532C5634AB21A6 = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "sourcecode.swift";
-			path = "GAIA.swift";
-			sourceTree = "<group>";
-		};
-		5339FACF2E59952B5E6C3D68 = {
-			isa = "PBXGroup";
-			children = (
-				"627A9253D3D5554FB35033F6",
-				"BE64A1A7624A9F059D52A983",
-				"DF45101585532C5634AB21A6",
-			);
-			path = "Core";
-			sourceTree = "<group>";
-		};
-		4D7FB635BC4AB009D0EFD210 = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "sourcecode.swift";
-			path = "Components.swift";
-			sourceTree = "<group>";
-		};
-		4E6F464959F7116097E2B0CC = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "sourcecode.swift";
-			path = "EqualizerView.swift";
-			sourceTree = "<group>";
-		};
-		50CF445567305F055FF86D13 = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "sourcecode.swift";
-			path = "SettingsViews.swift";
-			sourceTree = "<group>";
-		};
-		891F8C6C8FD844C6CC7946B4 = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "sourcecode.swift";
-			path = "StudioView.swift";
-			sourceTree = "<group>";
-		};
-		D448D7F76D948164898E37C9 = {
-			isa = "PBXGroup";
-			children = (
-				"4D7FB635BC4AB009D0EFD210",
-				"4E6F464959F7116097E2B0CC",
-				"50CF445567305F055FF86D13",
-				"891F8C6C8FD844C6CC7946B4",
-			);
-			path = "UI";
-			sourceTree = "<group>";
-		};
-		8D39E4C30594FF9191E25469 = {
-			isa = "PBXGroup";
-			children = (
-				"C8C9E2346A3749161BDD6741",
-				"5339FACF2E59952B5E6C3D68",
-				"D448D7F76D948164898E37C9",
-			);
-			path = "Sources";
-			sourceTree = "<group>";
-		};
-		2FC8C8F162D44C47E8DD4D01 = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "sourcecode.swift";
-			path = "AllControlsSynchronizationTests.swift";
-			sourceTree = "<group>";
-		};
-		583461682C5B2FA4844F4A2E = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "sourcecode.swift";
-			path = "ConnectionLifecycleTests.swift";
-			sourceTree = "<group>";
-		};
-		6D199A0B6BE2663138B83408 = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "sourcecode.swift";
-			path = "ControlMappingTests.swift";
-			sourceTree = "<group>";
-		};
-		A0BF4AE81A9785684120C3FA = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "sourcecode.swift";
-			path = "DeviceKeyStoreTests.swift";
-			sourceTree = "<group>";
-		};
-		D39463AE7C6B16F33156653C = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "sourcecode.swift";
-			path = "ProtocolTests.swift";
-			sourceTree = "<group>";
-		};
-		AF2FE42487CA284123DFDE1E = {
-			isa = "PBXGroup";
-			children = (
-				"2FC8C8F162D44C47E8DD4D01",
-				"583461682C5B2FA4844F4A2E",
-				"6D199A0B6BE2663138B83408",
-				"A0BF4AE81A9785684120C3FA",
-				"D39463AE7C6B16F33156653C",
-			);
-			path = "Tests";
-			sourceTree = "<group>";
-		};
-		4545F5318A0046043187F2EB = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "folder.assetcatalog";
-			path = "Assets.xcassets";
-			sourceTree = "<group>";
-		};
-		429D0230C59596BAEA6CC819 = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "text.plist.xml";
-			path = "Info.plist";
-			sourceTree = "<group>";
-		};
-		E5E98B546EE9848A91FF7C1F = {
-			isa = "PBXGroup";
-			children = (
-				"4545F5318A0046043187F2EB",
-				"429D0230C59596BAEA6CC819",
-			);
-			path = "Resources";
-			sourceTree = "<group>";
-		};
-		043803CC4A933EB87E0D5588 = {
+		C7DEADFE9296AB2AE7A5BE2D = {
 			isa = "PBXFileReference";
 			lastKnownFileType = "text.xcconfig";
 			path = "App.xcconfig";
 			sourceTree = "<group>";
 		};
-		6B3CC4A0F052F3D586275275 = {
+		86139DD453A8203CFA7A5755 = {
 			isa = "PBXFileReference";
 			lastKnownFileType = "text.xcconfig";
 			path = "Base.xcconfig";
 			sourceTree = "<group>";
 		};
-		7B600CDC76D4A724FEF9621C = {
+		46A1065FB0D55669128F0318 = {
 			isa = "PBXFileReference";
 			lastKnownFileType = "text.xcconfig";
 			path = "Debug.xcconfig";
 			sourceTree = "<group>";
 		};
-		D0FDB345A2209DB68E3847D0 = {
+		F9529A79FFF5F83C5C5AAEA3 = {
 			isa = "PBXFileReference";
 			lastKnownFileType = "text.xcconfig";
 			path = "Release.xcconfig";
 			sourceTree = "<group>";
 		};
-		CD2009B85D0F49651B0256DA = {
+		F7EB3E4960F4F3980135F7DD = {
 			isa = "PBXFileReference";
 			lastKnownFileType = "text.xcconfig";
 			path = "Tests.xcconfig";
 			sourceTree = "<group>";
 		};
-		4208812D7E4972296F946D95 = {
+		5F730C1C66EA172C55924261 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.xcconfig";
+			path = "UITests.xcconfig";
+			sourceTree = "<group>";
+		};
+		1D98EA84479ABF0A02E32A33 = {
 			isa = "PBXGroup";
 			children = (
-				"043803CC4A933EB87E0D5588",
-				"6B3CC4A0F052F3D586275275",
-				"7B600CDC76D4A724FEF9621C",
-				"D0FDB345A2209DB68E3847D0",
-				"CD2009B85D0F49651B0256DA",
+				"C7DEADFE9296AB2AE7A5BE2D",
+				"86139DD453A8203CFA7A5755",
+				"46A1065FB0D55669128F0318",
+				"F9529A79FFF5F83C5C5AAEA3",
+				"F7EB3E4960F4F3980135F7DD",
+				"5F730C1C66EA172C55924261",
 			);
 			path = "Configuration";
+			sourceTree = "<group>";
+		};
+		61474650B3144FE57910AEAE = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "folder.assetcatalog";
+			path = "Assets.xcassets";
+			sourceTree = "<group>";
+		};
+		BB308A788205B3617C2D2049 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.plist.xml";
+			path = "Info.plist";
+			sourceTree = "<group>";
+		};
+		637C336FB5F2FB70A3B1BA8F = {
+			isa = "PBXGroup";
+			children = (
+				"61474650B3144FE57910AEAE",
+				"BB308A788205B3617C2D2049",
+			);
+			path = "Resources";
+			sourceTree = "<group>";
+		};
+		15E7F5B8772B20465BAABC64 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "EarStudioIOSApp.swift";
+			sourceTree = "<group>";
+		};
+		32A03011822C9C3CAF9E54C5 = {
+			isa = "PBXGroup";
+			children = (
+				"15E7F5B8772B20465BAABC64",
+			);
+			path = "App";
+			sourceTree = "<group>";
+		};
+		EDD672246809BECB88C9294E = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "GAIABLECodec.swift";
+			sourceTree = "<group>";
+		};
+		920A3D5EDDCBA7956A7E424D = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "IOSBLETransport.swift";
+			sourceTree = "<group>";
+		};
+		0F30A9662061E162AE23DA72 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "IOSDeviceKeyStore.swift";
+			sourceTree = "<group>";
+		};
+		3E34FEF276D49ACCAAF65378 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "IOSStudioModel.swift";
+			sourceTree = "<group>";
+		};
+		91EF5A18A4B5E9610B8A5D3B = {
+			isa = "PBXGroup";
+			children = (
+				"EDD672246809BECB88C9294E",
+				"920A3D5EDDCBA7956A7E424D",
+				"0F30A9662061E162AE23DA72",
+				"3E34FEF276D49ACCAAF65378",
+			);
+			path = "Platform";
+			sourceTree = "<group>";
+		};
+		5AEAA05E76E30C3F20CEEE7C = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "PhoneDeviceView.swift";
+			sourceTree = "<group>";
+		};
+		1602F9990DE1EE7DE83C027B = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "PhoneEqualizerView.swift";
+			sourceTree = "<group>";
+		};
+		9007A3B2F0526C787CC48903 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "PhoneSettingsView.swift";
+			sourceTree = "<group>";
+		};
+		2FB54F245E52B14CC0BB8FE3 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "RootView.swift";
+			sourceTree = "<group>";
+		};
+		BE241CBF6870C8C89D7D7E61 = {
+			isa = "PBXGroup";
+			children = (
+				"5AEAA05E76E30C3F20CEEE7C",
+				"1602F9990DE1EE7DE83C027B",
+				"9007A3B2F0526C787CC48903",
+				"2FB54F245E52B14CC0BB8FE3",
+			);
+			path = "UI";
+			sourceTree = "<group>";
+		};
+		CA5F33E4B7DBD5037589EFE4 = {
+			isa = "PBXGroup";
+			children = (
+				"32A03011822C9C3CAF9E54C5",
+				"91EF5A18A4B5E9610B8A5D3B",
+				"BE241CBF6870C8C89D7D7E61",
+			);
+			path = "Sources";
+			sourceTree = "<group>";
+		};
+		0CA5730FFEE382C6513D1FEB = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "GAIABLECodecTests.swift";
+			sourceTree = "<group>";
+		};
+		F04081D1DF095F4F41A1A7A0 = {
+			isa = "PBXGroup";
+			children = (
+				"0CA5730FFEE382C6513D1FEB",
+			);
+			path = "Tests";
+			sourceTree = "<group>";
+		};
+		4074F90180EA70B3BBA263C0 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "IPhoneLayoutTests.swift";
+			sourceTree = "<group>";
+		};
+		898F9FE8D0119BECE731D3C2 = {
+			isa = "PBXGroup";
+			children = (
+				"4074F90180EA70B3BBA263C0",
+			);
+			path = "UITests";
+			sourceTree = "<group>";
+		};
+		CE2A0B33BFEAD48A95D39491 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "net.daringfireball.markdown";
+			path = "README.md";
+			sourceTree = "<group>";
+		};
+		258962677C5C9A464241ACBA = {
+			isa = "PBXGroup";
+			children = (
+				"1D98EA84479ABF0A02E32A33",
+				"637C336FB5F2FB70A3B1BA8F",
+				"CA5F33E4B7DBD5037589EFE4",
+				"F04081D1DF095F4F41A1A7A0",
+				"898F9FE8D0119BECE731D3C2",
+				"CE2A0B33BFEAD48A95D39491",
+			);
+			path = "iOS";
+			sourceTree = "<group>";
+		};
+		F6D72556306AB60DF8C58CC5 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.xcconfig";
+			path = "App.xcconfig";
+			sourceTree = "<group>";
+		};
+		56D2BA114FFD72260E6EF62D = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.xcconfig";
+			path = "Base.xcconfig";
+			sourceTree = "<group>";
+		};
+		52B617D69E0D11F72EA83657 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.xcconfig";
+			path = "Debug.xcconfig";
+			sourceTree = "<group>";
+		};
+		897FDCD884B8962127820C8A = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.xcconfig";
+			path = "Release.xcconfig";
+			sourceTree = "<group>";
+		};
+		CF1BF17A0FDAF67364DE1FB6 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.xcconfig";
+			path = "Tests.xcconfig";
+			sourceTree = "<group>";
+		};
+		43C1D3028B2886DECD071DB8 = {
+			isa = "PBXGroup";
+			children = (
+				"F6D72556306AB60DF8C58CC5",
+				"56D2BA114FFD72260E6EF62D",
+				"52B617D69E0D11F72EA83657",
+				"897FDCD884B8962127820C8A",
+				"CF1BF17A0FDAF67364DE1FB6",
+			);
+			path = "Configuration";
+			sourceTree = "<group>";
+		};
+		DAF50982E58E943D950DE2C8 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "folder.assetcatalog";
+			path = "Assets.xcassets";
+			sourceTree = "<group>";
+		};
+		B47ECD4F628194E39D021354 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.plist.xml";
+			path = "Info.plist";
+			sourceTree = "<group>";
+		};
+		1067EF5A13B705D02D9146B3 = {
+			isa = "PBXGroup";
+			children = (
+				"DAF50982E58E943D950DE2C8",
+				"B47ECD4F628194E39D021354",
+			);
+			path = "Resources";
+			sourceTree = "<group>";
+		};
+		B38B382F799C4FB3B67F7CF6 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "AppMetadata.swift";
+			sourceTree = "<group>";
+		};
+		0811176395E359AC08FC7AA3 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "BluetoothTransport.swift";
+			sourceTree = "<group>";
+		};
+		ABA51CF633DE5D00763716DB = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "DeviceKeyStore.swift";
+			sourceTree = "<group>";
+		};
+		F6686742B6FB940E00A24B48 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "EarStudioApp.swift";
+			sourceTree = "<group>";
+		};
+		646FA164A92C1F4659724DC4 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "MacSessionTransport.swift";
+			sourceTree = "<group>";
+		};
+		99D1A02D6AAC37CFB53E369E = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "StudioModel.swift";
+			sourceTree = "<group>";
+		};
+		D02C3EF839E0DDFACDE10E5A = {
+			isa = "PBXGroup";
+			children = (
+				"B38B382F799C4FB3B67F7CF6",
+				"0811176395E359AC08FC7AA3",
+				"ABA51CF633DE5D00763716DB",
+				"F6686742B6FB940E00A24B48",
+				"646FA164A92C1F4659724DC4",
+				"99D1A02D6AAC37CFB53E369E",
+			);
+			path = "App";
+			sourceTree = "<group>";
+		};
+		BF1C3DAB417E989EFAF0BD5C = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "Components.swift";
+			sourceTree = "<group>";
+		};
+		D2329F51B9FEF82EE92A699F = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "EqualizerView.swift";
+			sourceTree = "<group>";
+		};
+		61E5CC4CB2ABE4D78F34F8D8 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "SettingsViews.swift";
+			sourceTree = "<group>";
+		};
+		CD5C2ED403B62A2E969C03C6 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "StudioView.swift";
+			sourceTree = "<group>";
+		};
+		291AC12A6767E4E509054785 = {
+			isa = "PBXGroup";
+			children = (
+				"BF1C3DAB417E989EFAF0BD5C",
+				"D2329F51B9FEF82EE92A699F",
+				"61E5CC4CB2ABE4D78F34F8D8",
+				"CD5C2ED403B62A2E969C03C6",
+			);
+			path = "UI";
+			sourceTree = "<group>";
+		};
+		F3EB3804E9EC92BBD2928C8F = {
+			isa = "PBXGroup";
+			children = (
+				"D02C3EF839E0DDFACDE10E5A",
+				"291AC12A6767E4E509054785",
+			);
+			path = "Sources";
+			sourceTree = "<group>";
+		};
+		0172DDD3A1B650CB7E749E4A = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "ConnectionLifecycleTests.swift";
+			sourceTree = "<group>";
+		};
+		48C06F4FC1B410190B0ED10A = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "DeviceKeyStoreTests.swift";
+			sourceTree = "<group>";
+		};
+		1B961C3BFFFC3D81C0781C4A = {
+			isa = "PBXGroup";
+			children = (
+				"0172DDD3A1B650CB7E749E4A",
+				"48C06F4FC1B410190B0ED10A",
+			);
+			path = "Tests";
+			sourceTree = "<group>";
+		};
+		8794DDBED0679D75834557AC = {
+			isa = "PBXGroup";
+			children = (
+				"43C1D3028B2886DECD071DB8",
+				"1067EF5A13B705D02D9146B3",
+				"F3EB3804E9EC92BBD2928C8F",
+				"1B961C3BFFFC3D81C0781C4A",
+			);
+			path = "macOS";
+			sourceTree = "<group>";
+		};
+		E473BE991A0EFCC17B65E7F3 = {
+			isa = "PBXGroup";
+			children = (
+				"258962677C5C9A464241ACBA",
+				"8794DDBED0679D75834557AC",
+			);
+			path = "Apps";
+			sourceTree = "<group>";
+		};
+		8C62697F74151F2F921FBF65 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.script.python";
+			path = "test_apple_tools.py";
+			sourceTree = "<group>";
+		};
+		72229507E69B070DA84DE471 = {
+			isa = "PBXGroup";
+			children = (
+				"8C62697F74151F2F921FBF65",
+			);
+			path = "tests";
+			sourceTree = "<group>";
+		};
+		BADB19582B866127A51DE30F = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.script.python";
+			path = "apple_signing.py";
+			sourceTree = "<group>";
+		};
+		8D85038AC96A95B9EE4B1388 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.script.sh";
+			path = "build-ios.sh";
 			sourceTree = "<group>";
 		};
 		FD2BD9D4AD9DEA3C1FABD76E = {
@@ -231,16 +445,40 @@
 			path = "build.sh";
 			sourceTree = "<group>";
 		};
+		9001B18D152B4AEAF9E18323 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.script.sh";
+			path = "check-ios-package.sh";
+			sourceTree = "<group>";
+		};
 		D3BAF805714448A753FE4AC3 = {
 			isa = "PBXFileReference";
 			lastKnownFileType = "sourcecode.swift";
 			path = "generate_icon.swift";
 			sourceTree = "<group>";
 		};
+		0BDEB4BAD732AD9854B0DD21 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.script.python";
+			path = "generate_ios_project.py";
+			sourceTree = "<group>";
+		};
 		41EFD9176CA4A9EEC0DD7843 = {
 			isa = "PBXFileReference";
 			lastKnownFileType = "text.script.python";
 			path = "generate_project.py";
+			sourceTree = "<group>";
+		};
+		0690E24722A9D0F600D3C577 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.script.sh";
+			path = "install-ios.sh";
+			sourceTree = "<group>";
+		};
+		EB53AD8A1816EDBA0128D7DC = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.script.python";
+			path = "install_ios.py";
 			sourceTree = "<group>";
 		};
 		618F46E4AD93BE6AC9B5B884 = {
@@ -258,9 +496,16 @@
 		627C0840A5A4CABED4844BD2 = {
 			isa = "PBXGroup";
 			children = (
+				"72229507E69B070DA84DE471",
+				"BADB19582B866127A51DE30F",
+				"8D85038AC96A95B9EE4B1388",
 				"FD2BD9D4AD9DEA3C1FABD76E",
+				"9001B18D152B4AEAF9E18323",
 				"D3BAF805714448A753FE4AC3",
+				"0BDEB4BAD732AD9854B0DD21",
 				"41EFD9176CA4A9EEC0DD7843",
+				"0690E24722A9D0F600D3C577",
+				"EB53AD8A1816EDBA0128D7DC",
 				"618F46E4AD93BE6AC9B5B884",
 				"5D20321381D3D70B12679CF1",
 			);
@@ -277,12 +522,6 @@
 			isa = "PBXFileReference";
 			lastKnownFileType = "text";
 			path = "LICENSE";
-			sourceTree = "<group>";
-		};
-		5D786ABECC8D35B1AA3E6ABC = {
-			isa = "PBXFileReference";
-			lastKnownFileType = "sourcecode.swift";
-			path = "Package.swift";
 			sourceTree = "<group>";
 		};
 		4E783A9E10D2A8ABA38CD11C = {
@@ -309,14 +548,10 @@
 		B28B7AF69320201D1CF206EB = {
 			isa = "PBXGroup";
 			children = (
-				"8D39E4C30594FF9191E25469",
-				"AF2FE42487CA284123DFDE1E",
-				"E5E98B546EE9848A91FF7C1F",
-				"4208812D7E4972296F946D95",
+				"E473BE991A0EFCC17B65E7F3",
 				"627C0840A5A4CABED4844BD2",
 				"8EC9A00BFD09B3190AC6B222",
 				"0398CCD0F49298B10A3D76A4",
-				"5D786ABECC8D35B1AA3E6ABC",
 				"FBDC4F23F93125BBEEAE800C",
 			);
 			sourceTree = "<group>";
@@ -326,14 +561,14 @@
 			name = "Debug";
 			buildSettings = {
 			};
-			baseConfigurationReference = "7B600CDC76D4A724FEF9621C";
+			baseConfigurationReference = "52B617D69E0D11F72EA83657";
 		};
 		00F209874A1F7309F6DCEAA7 = {
 			isa = "XCBuildConfiguration";
 			name = "Release";
 			buildSettings = {
 			};
-			baseConfigurationReference = "D0FDB345A2209DB68E3847D0";
+			baseConfigurationReference = "897FDCD884B8962127820C8A";
 		};
 		96316AF13F45443E4E9C4BA0 = {
 			isa = "XCConfigurationList";
@@ -349,14 +584,14 @@
 			name = "Debug";
 			buildSettings = {
 			};
-			baseConfigurationReference = "043803CC4A933EB87E0D5588";
+			baseConfigurationReference = "F6D72556306AB60DF8C58CC5";
 		};
 		F72D4F08E84CA4C7F809A7CF = {
 			isa = "XCBuildConfiguration";
 			name = "Release";
 			buildSettings = {
 			};
-			baseConfigurationReference = "043803CC4A933EB87E0D5588";
+			baseConfigurationReference = "F6D72556306AB60DF8C58CC5";
 		};
 		277EF9D2908DE87D83B8FECE = {
 			isa = "XCConfigurationList";
@@ -372,14 +607,14 @@
 			name = "Debug";
 			buildSettings = {
 			};
-			baseConfigurationReference = "CD2009B85D0F49651B0256DA";
+			baseConfigurationReference = "CF1BF17A0FDAF67364DE1FB6";
 		};
 		C4D458CFDB61996E24F4F16F = {
 			isa = "XCBuildConfiguration";
 			name = "Release";
 			buildSettings = {
 			};
-			baseConfigurationReference = "CD2009B85D0F49651B0256DA";
+			baseConfigurationReference = "CF1BF17A0FDAF67364DE1FB6";
 		};
 		0B9C531D8D86E4E4E21E4B5A = {
 			isa = "XCConfigurationList";
@@ -390,82 +625,82 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = "Release";
 		};
-		2D0B6B3E9BAD126222C79228 = {
-			isa = "PBXBuildFile";
-			fileRef = "F63F2D9A4B757C6F2F625982";
+		2D81E302D71AF2D1C13008AE = {
+			isa = "XCLocalSwiftPackageReference";
+			relativePath = "Packages/EarStudioKit";
 		};
-		6FA0CF3C6EAEBD5ABE129B58 = {
-			isa = "PBXBuildFile";
-			fileRef = "96028A2AE35C94731ECDEFA0";
+		D71989639B8AA2110E07F1DC = {
+			isa = "XCSwiftPackageProductDependency";
+			productName = "EarStudioKit";
 		};
-		9A9918124A5035B42C5EE466 = {
+		54C67E4961300B0FA4EE4240 = {
 			isa = "PBXBuildFile";
-			fileRef = "D9A002130F84E647DD51CC50";
+			fileRef = "B38B382F799C4FB3B67F7CF6";
 		};
-		9FE7F6B46729145BE185DDF5 = {
+		ECAA4B6912B3D1C1C6713D93 = {
 			isa = "PBXBuildFile";
-			fileRef = "08B162158FCD1CCB19FDD8FA";
+			fileRef = "0811176395E359AC08FC7AA3";
 		};
-		CE972287EFCF6B2F2710313A = {
+		57B73FF2E2D891FF07CEBE68 = {
 			isa = "PBXBuildFile";
-			fileRef = "70CC2D0BC58D90C86CE8D3A4";
+			fileRef = "ABA51CF633DE5D00763716DB";
 		};
-		7E3BE3F717BAB0BC6AA24070 = {
+		EB15AC533FD37F2F7A54CFB4 = {
 			isa = "PBXBuildFile";
-			fileRef = "627A9253D3D5554FB35033F6";
+			fileRef = "F6686742B6FB940E00A24B48";
 		};
-		0DB0B15B6B808E8B03304629 = {
+		3796D2DA108364DED7B69C92 = {
 			isa = "PBXBuildFile";
-			fileRef = "BE64A1A7624A9F059D52A983";
+			fileRef = "646FA164A92C1F4659724DC4";
 		};
-		FD47D63F3803459C5BC8BF31 = {
+		91AD65255CFAA38A24D6A02C = {
 			isa = "PBXBuildFile";
-			fileRef = "DF45101585532C5634AB21A6";
+			fileRef = "99D1A02D6AAC37CFB53E369E";
 		};
-		1101FAB98118A3DA027DEA07 = {
+		A3568A7B1E0BD16E60B3B72C = {
 			isa = "PBXBuildFile";
-			fileRef = "4D7FB635BC4AB009D0EFD210";
+			fileRef = "BF1C3DAB417E989EFAF0BD5C";
 		};
-		AA727DE570F02EADD3A2FF1B = {
+		CE3E447F431F546D58DD31F3 = {
 			isa = "PBXBuildFile";
-			fileRef = "4E6F464959F7116097E2B0CC";
+			fileRef = "D2329F51B9FEF82EE92A699F";
 		};
-		66AE7307568F4D573637D0E3 = {
+		95125A34182D53B525AB7B58 = {
 			isa = "PBXBuildFile";
-			fileRef = "50CF445567305F055FF86D13";
+			fileRef = "61E5CC4CB2ABE4D78F34F8D8";
 		};
-		D2534C8B16A60B76920D52E7 = {
+		EF0432F93238BF3EE536D5D6 = {
 			isa = "PBXBuildFile";
-			fileRef = "891F8C6C8FD844C6CC7946B4";
+			fileRef = "CD5C2ED403B62A2E969C03C6";
 		};
 		949D493B91791558E87BC5D7 = {
 			isa = "PBXSourcesBuildPhase";
 			buildActionMask = 2147483647;
 			files = (
-				"2D0B6B3E9BAD126222C79228",
-				"6FA0CF3C6EAEBD5ABE129B58",
-				"9A9918124A5035B42C5EE466",
-				"9FE7F6B46729145BE185DDF5",
-				"CE972287EFCF6B2F2710313A",
-				"7E3BE3F717BAB0BC6AA24070",
-				"0DB0B15B6B808E8B03304629",
-				"FD47D63F3803459C5BC8BF31",
-				"1101FAB98118A3DA027DEA07",
-				"AA727DE570F02EADD3A2FF1B",
-				"66AE7307568F4D573637D0E3",
-				"D2534C8B16A60B76920D52E7",
+				"54C67E4961300B0FA4EE4240",
+				"ECAA4B6912B3D1C1C6713D93",
+				"57B73FF2E2D891FF07CEBE68",
+				"EB15AC533FD37F2F7A54CFB4",
+				"3796D2DA108364DED7B69C92",
+				"91AD65255CFAA38A24D6A02C",
+				"A3568A7B1E0BD16E60B3B72C",
+				"CE3E447F431F546D58DD31F3",
+				"95125A34182D53B525AB7B58",
+				"EF0432F93238BF3EE536D5D6",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		BD92572B49AC16A86614498D = {
 			isa = "PBXFrameworksBuildPhase";
 			buildActionMask = 2147483647;
-			files = ();
+			files = (
+				"ABB7D186BB24D6784ADE0121",
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		530EE4A3554F0D124A496144 = {
+		FA7BE59CFDDF2E0AF6B050E2 = {
 			isa = "PBXBuildFile";
-			fileRef = "4545F5318A0046043187F2EB";
+			fileRef = "DAF50982E58E943D950DE2C8";
 		};
 		F2E65DBEE3F4F759D6DD32C5 = {
 			isa = "PBXBuildFile";
@@ -475,47 +710,34 @@
 			isa = "PBXResourcesBuildPhase";
 			buildActionMask = 2147483647;
 			files = (
-				"530EE4A3554F0D124A496144",
+				"FA7BE59CFDDF2E0AF6B050E2",
 				"F2E65DBEE3F4F759D6DD32C5",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		AC6E0BAEE802CC1BBA83CE05 = {
+		5E977F043B37B6087E8F5B8A = {
 			isa = "PBXBuildFile";
-			fileRef = "2FC8C8F162D44C47E8DD4D01";
+			fileRef = "0172DDD3A1B650CB7E749E4A";
 		};
-		B118F54DA8866B991E9D9051 = {
+		8250D41B1553DACDC23DEE17 = {
 			isa = "PBXBuildFile";
-			fileRef = "583461682C5B2FA4844F4A2E";
-		};
-		8D9DBA9948EFD3FD5004BF06 = {
-			isa = "PBXBuildFile";
-			fileRef = "6D199A0B6BE2663138B83408";
-		};
-		F8509280981DBC981950D634 = {
-			isa = "PBXBuildFile";
-			fileRef = "A0BF4AE81A9785684120C3FA";
-		};
-		62E164E3C5652FD03130C61E = {
-			isa = "PBXBuildFile";
-			fileRef = "D39463AE7C6B16F33156653C";
+			fileRef = "48C06F4FC1B410190B0ED10A";
 		};
 		77A03FEE20FE96AD9384861E = {
 			isa = "PBXSourcesBuildPhase";
 			buildActionMask = 2147483647;
 			files = (
-				"AC6E0BAEE802CC1BBA83CE05",
-				"B118F54DA8866B991E9D9051",
-				"8D9DBA9948EFD3FD5004BF06",
-				"F8509280981DBC981950D634",
-				"62E164E3C5652FD03130C61E",
+				"5E977F043B37B6087E8F5B8A",
+				"8250D41B1553DACDC23DEE17",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		E05DB79C430AA1B0BA487AFC = {
 			isa = "PBXFrameworksBuildPhase";
 			buildActionMask = 2147483647;
-			files = ();
+			files = (
+				"5F16593974FA34DFD70B32E5",
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		D5C76E148680C094C001AC35 = {
@@ -523,6 +745,14 @@
 			buildActionMask = 2147483647;
 			files = ();
 			runOnlyForDeploymentPostprocessing = 0;
+		};
+		ABB7D186BB24D6784ADE0121 = {
+			isa = "PBXBuildFile";
+			productRef = "D71989639B8AA2110E07F1DC";
+		};
+		5F16593974FA34DFD70B32E5 = {
+			isa = "PBXBuildFile";
+			productRef = "D71989639B8AA2110E07F1DC";
 		};
 		D799BAE6088A90139B415FCC = {
 			isa = "PBXContainerItemProxy";
@@ -546,6 +776,9 @@
 			);
 			buildRules = ();
 			dependencies = ();
+			packageProductDependencies = (
+				"D71989639B8AA2110E07F1DC",
+			);
 			name = "EarStudioCompanion";
 			productName = "EarStudio Companion";
 			productReference = "4E783A9E10D2A8ABA38CD11C";
@@ -562,6 +795,9 @@
 			buildRules = ();
 			dependencies = (
 				"9F8F6AF81E0B8CD0E2C16D29",
+			);
+			packageProductDependencies = (
+				"D71989639B8AA2110E07F1DC",
 			);
 			name = "EarStudioCompanionTests";
 			productName = "EarStudioCompanionTests";
@@ -594,6 +830,9 @@
 			productRefGroup = "FBDC4F23F93125BBEEAE800C";
 			projectDirPath = "";
 			projectRoot = "";
+			packageReferences = (
+				"2D81E302D71AF2D1C13008AE",
+			);
 			targets = (
 				"7D1043473D55BFA90E8530D3",
 				"A94A8FE5CCB19BA61C4C0873",

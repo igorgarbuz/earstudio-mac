@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="Docs/Images/es100.png" alt="EarStudio ES100 product photo from the original app" width="246">
+  <img src="Packages/EarStudioKit/Sources/EarStudioAssets/Resources/SharedAssets.xcassets/ES100Product.imageset/es100.png" alt="EarStudio ES100 product photo from the original app" width="246">
 </p>
 
-# EarStudio Companion for macOS
+# EarStudio Companion
 
 **[⬇ Download for macOS — latest release](https://github.com/igorgarbuz/earstudio-mac/releases/latest)**
 
@@ -48,7 +48,7 @@ Each release includes a SHA-256 checksum. Download it beside the DMG and run `sh
 3. If device authorization is requested, briefly press its power button within three minutes. This authorizes the companion app separately from macOS Bluetooth pairing. The app remembers that authorization locally for future connections; no Keychain password is needed.
 4. Wait for settings to load before editing. To play Mac audio through EarStudio, select it separately in macOS Sound settings.
 
-The app starts disconnected and sends no settings on startup. The bordered **Try demo** button, captioned **Explore without a device**, lets you explore sample settings; it appears only when disconnected. An active demo is labeled **DEMO · NO DEVICE**, with an **Exit demo** button. Only one app process can run at a time: opening another copy brings the existing app forward. Close other EarStudio controllers before connecting.
+The app starts disconnected and sends no settings on startup. Only one app process can run at a time: opening another copy brings the existing app forward. Close other EarStudio controllers before connecting.
 
 Device authorization tokens are stored in `~/Library/Application Support/EarStudioCompanion/device-keys.json`, with access restricted to your macOS user (directory `0700`, file `0600`). When upgrading from a version that used Keychain, press the device's power button once if prompted. The app does not read, migrate, or delete the old Keychain entry.
 
@@ -77,7 +77,7 @@ Controls follow recovered firmware version gates and require their settings to h
 
 The EQ matches the Android app’s **graphic equalizer**: fixed center frequencies and two Q options. It does not provide arbitrary parametric bands. The plotted curve estimates the response; the ES100 processes the audio. USB-format and hands-free-profile changes require restarting the device.
 
-Firmware flashing, factory reset, device renaming, playback transport controls and an iOS build are not included.
+Firmware flashing, factory reset, device renaming and playback transport controls are not included. A development iPhone companion now lives in this repository; its Bluetooth hardware compatibility is still experimental. See [iPhone development](Docs/iOS.md).
 
 ## Preset compatibility
 
@@ -100,21 +100,23 @@ open EarStudioCompanion.xcodeproj
 Choose the **EarStudioCompanion** scheme and **My Mac**, then press **⌘R** to run or **⌘U** to test. From the cloned repository, the CLI equivalents are:
 
 ```sh
-./Tools/build.sh build    # Universal Release app
+./Tools/build.sh build    # Developer ID signed universal Release app
 ./Tools/build.sh test     # Native XCTest suite
-swift test               # Headless protocol/core tests
-./Tools/package.sh        # Universal archive, verified DMG and checksum
+swift test --package-path Packages/EarStudioKit  # Shared core/session tests
+./Tools/check-ios-package.sh                    # Compile shared modules for iOS Simulator
+./Tools/package.sh        # Developer ID signed app/DMG and checksum
+./Tools/install-ios.sh    # Detect iPhone/team, build, sign and install locally
 ```
 
-`build.sh` defaults to `build` and does not create a DMG or increment the version. Update `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `Configuration/App.xcconfig` when preparing a new version. The build output prints the embedded app version.
+`build.sh` defaults to `build` and does not create a DMG. Set `MARKETING_VERSION` deliberately in each app’s `Configuration/App.xcconfig`. iPhone installs and macOS release builds/archives automatically reserve the next build number and embed the Git revision plus a modified marker. Tests and compile-only iOS builds do not reserve numbers. See [build numbering](Docs/Maintaining.md#build-numbering).
 
-Generated apps, archives and logs go into the ignored build directory; DMGs and checksums go into the ignored dist directory. Local builds use ad-hoc signing and require no paid developer account. Apple Developer ID signing and notarization are separate distribution steps.
+Generated apps, archives and logs go into the ignored build directory; DMGs and checksums go into the ignored dist directory. macOS Release builds and packaging require a valid **Developer ID Application** certificate and private key in the Keychain, with hardened runtime and a secure timestamp. The scripts detect a unique identity, or accept `APPLE_TEAM_ID` and `MACOS_SIGN_IDENTITY` to select one. Tests use ad-hoc signing; contributors and CI can explicitly run `./Tools/build.sh build --ad-hoc` or `./Tools/package.sh --ad-hoc`. The release publishing path requires Developer ID signing. Notarization remains a separate step; signing alone does not make the download notarized. See [signing setup](Docs/Maintaining.md#signing-local-builds).
 
 The checked-in Xcode project is ready to open. The optional project generator is only needed after adding/removing files outside Xcode: run `python3 Tools/generate_project.py`. Build settings belong in the xcconfig files; regeneration replaces manual project/scheme edits.
 
 ## Publish a release
 
-Prepare a pull request updating the version and build number in **Configuration/App.xcconfig** and adding version-specific notes under **Docs/Releases**. After review, passing CI, and merging, switch to `main` in a clean local checkout and run `git pull --ff-only`. With [GitHub CLI](https://cli.github.com/) installed and authenticated using `gh auth login`, run:
+Prepare a pull request updating the version and build number in **Apps/macOS/Configuration/App.xcconfig** and adding version-specific notes under **Docs/Releases**. After review, passing CI, and merging, switch to `main` in a clean local checkout and run `git pull --ff-only`. With [GitHub CLI](https://cli.github.com/) installed and authenticated using `gh auth login`, run:
 
 ```sh
 ./Tools/publish-release.sh --dry-run
@@ -131,7 +133,9 @@ Report suspected vulnerabilities privately using [SECURITY.md](SECURITY.md). [Ma
 
 ## Project and protocol documentation
 
-The repository root is the standalone Mac project. The native project groups lifecycle/Bluetooth/model code under App, protocol/state/preset code under Core, and SwiftUI screens under UI. The headless Swift package shares the protocol code and core tests; app-specific tests run through Xcode.
+The repository contains the shipping macOS app and a development iPhone companion, both using the local `Packages/EarStudioKit` Swift package. `EarStudioCompanion.xcodeproj` remains the macOS entry point. Platform code and signing configuration live under `Apps/macOS`; `Apps/iOS` contains the iPhone app, with its own `EarStudioiOS.xcodeproj` entry point and simulator UI tests. See [iPhone development](Docs/iOS.md) for build instructions and hardware validation limits.
+
+`EarStudioCore` owns the protocol, settings and presets. `EarStudioSession` owns authentication, command scheduling and readback reconciliation behind an injected transport. `EarStudioUI` provides shared bindings, theme, product image and EQ chart; `EarStudioAssets` owns the resource bundle. Shared tests run through SwiftPM, and native integration tests run through Xcode. See [Architecture](Docs/Architecture.md) for ownership, dependency rules and platform adapters.
 
 - [Protocol reference](Docs/Protocol.md): framing, authentication, commands, units, reply layouts and firmware gates.
 - [Control audit](Docs/ControlAudit.md): every exposed setting’s write/read mapping, corrections and validation limits.
@@ -160,6 +164,6 @@ The six technical PDFs are Radsone application notes and reports, rather than ch
 
 ## License
 
-The independently authored code, tests, documentation and app icon are [MIT licensed](https://github.com/igorgarbuz/earstudio-mac/blob/main/LICENSE). The Radsone PDFs in `Docs/Reference` and the original product photo in `Docs/Images` (also bundled in `Resources/Assets.xcassets/ES100Product.imageset` for Overview) are third-party materials and are not covered by that license. Vendor Android binaries and decompiled material are not distributed in this repository or its app. EarStudio and other product names belong to their respective owners.
+The independently authored code, tests, documentation and app icon are [MIT licensed](https://github.com/igorgarbuz/earstudio-mac/blob/main/LICENSE). The Radsone PDFs in `Docs/Reference` and the original product photo in `Packages/EarStudioKit/Sources/EarStudioAssets/Resources/SharedAssets.xcassets/ES100Product.imageset` (shared by the README and Overview) are third-party materials and are not covered by that license. Vendor Android binaries and decompiled material are not distributed in this repository or its app. EarStudio and other product names belong to their respective owners.
 
 [^app-availability]: App availability checked in October 2026: [AppBrain’s Android listing](https://www.appbrain.com/app/earstudio/com.dealon.earstudio) records removal from Google Play in May 2025; [Soft112’s iOS listing](https://earstudio-ios.soft112.com/earstudio-ios-alternatives.html) reports removal from the App Store. These records do not establish when or why Radsone ceased operations.

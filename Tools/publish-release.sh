@@ -24,12 +24,12 @@ for tool in git gh swift xcodebuild shasum; do
     command -v "$tool" >/dev/null || fail "Missing required tool: $tool"
 done
 cd "$project_root"
-[[ "$(git rev-parse --show-toplevel)" == "$project_root" ]] || fail 'Run from the standalone Mac Git repository.'
+[[ "$(git rev-parse --show-toplevel)" == "$project_root" ]] || fail 'Run from the EarStudio repository.'
 assert_clean() {
     [[ -z "$(git status --porcelain --untracked-files=normal)" ]] || fail 'Commit or remove pending changes before releasing.'
 }
 assert_clean
-version=$(awk '$1 == "MARKETING_VERSION" && $2 == "=" { print $3 }' Configuration/App.xcconfig)
+version=$(awk '$1 == "MARKETING_VERSION" && $2 == "=" { print $3 }' Apps/macOS/Configuration/App.xcconfig)
 [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail 'MARKETING_VERSION must have three numeric components.'
 tag="v$version"
 commit=$(git rev-parse HEAD)
@@ -70,7 +70,7 @@ fi
 [[ "$(gh repo view "$repository" --json isPrivate --jq '.isPrivate')" == false ]] \
     || fail 'The repository must be public before publishing this public release.'
 printf 'Running core tests…\n'
-if ! swift test --package-path "$project_root" >"$project_root/build/logs/core-test.log" 2>&1; then
+if ! swift test --package-path "$project_root/Packages/EarStudioKit" >"$project_root/build/logs/core-test.log" 2>&1; then
     tail -n 80 "$project_root/build/logs/core-test.log" >&2
     fail 'Core tests failed.'
 fi
