@@ -229,15 +229,15 @@ private struct PhoneDiagnosticsView: View {
             Section {
                 ShareLink(item: diagnostics) { Label("Share diagnostics", systemImage: "square.and.arrow.up") }
                     .frame(minHeight: 44).accessibilityIdentifier("diagnostics.share")
-                if s.logs.isEmpty { Text("No connection activity yet.").foregroundStyle(.secondary) }
-                ForEach(s.logs) { entry in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(entry.date, style: .time).font(.caption).foregroundStyle(.secondary)
-                        Text(entry.text).font(.caption.monospaced()).textSelection(.enabled)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                NavigationLink {
+                    PhoneConnectionLogView(diagnostics: diagnostics)
+                } label: {
+                    Label("View connection log", systemImage: "list.bullet.rectangle")
                 }
-            } header: { Text("Connection log") } footer: { Text("Device authorization keys are excluded from diagnostics.") }
+                .frame(minHeight: 44).accessibilityIdentifier("diagnostics.viewLog")
+            } header: { Text("Diagnostics") } footer: {
+                Text("Recent connection activity is kept in memory (up to 300 entries). Device authorization keys are excluded.")
+            }
             Section {
                 NavigationLink("Privacy policy") {
                     ScrollView {
@@ -254,5 +254,41 @@ private struct PhoneDiagnosticsView: View {
             Button("Forget confirmation", role: .destructive) { s.forgetKey() }
             Button("Cancel", role: .cancel) {}
         } message: { Text("You will need to authorize the app again on your next connection.") }
+    }
+}
+
+private struct PhoneConnectionLogView: View {
+    let diagnostics: String
+    @EnvironmentObject private var model: IOSStudioModel
+
+    var body: some View {
+        List {
+            Section {
+                if model.session.logs.isEmpty {
+                    Text("No connection activity yet.")
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(model.session.logs.reversed()) { entry in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(entry.date, style: .time)
+                            .font(.caption).foregroundStyle(.secondary)
+                        Text(entry.text).font(.caption.monospaced())
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            } header: {
+                Text("Newest first")
+            } footer: {
+                Text("Shows up to 300 recent entries. Device authorization keys are excluded.")
+            }
+        }
+        .navigationTitle("Connection log")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ShareLink(item: diagnostics) {
+                Label("Share diagnostics", systemImage: "square.and.arrow.up")
+            }
+        }
     }
 }

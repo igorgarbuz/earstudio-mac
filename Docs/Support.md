@@ -46,7 +46,9 @@ First try reconnecting with other controller apps closed. If authorization conti
 
 ## Diagnostics
 
-Open **Settings → Diagnostics & about → Share diagnostics**. Review the text and email it to support if useful. Device authorization keys are excluded from the exported diagnostics. Sending diagnostics is optional.
+Open **Settings → Diagnostics & about → View connection log** to inspect recent activity on a separate screen, newest first. The app keeps up to 300 entries in memory so the About page stays compact.
+
+Choose **Share diagnostics** on the Diagnostics & about page to export the log. Review the text and email it to support if useful. Device authorization keys are excluded from the exported diagnostics. Sending diagnostics is optional.
 
 ## Scope and privacy
 
