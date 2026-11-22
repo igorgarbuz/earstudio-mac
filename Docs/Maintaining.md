@@ -115,8 +115,8 @@ References: [Apple code-signing certificates](https://developer.apple.com/docume
 
 ## Releases
 
-1. Prepare a PR updating `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `Apps/macOS/Configuration/App.xcconfig`, with release notes in `Docs/Releases/`.
-2. Review the PR, wait for both CI checks, resolve conversations, and squash merge it.
+1. Compare changes against the latest macOS release and select a patch (compatible fixes), minor (compatible new features), or major (breaking changes) version. Explain the choice in the PR or release notes. Update `MARKETING_VERSION` in `Apps/macOS/Configuration/App.xcconfig` and ensure the `CURRENT_PROJECT_VERSION` floor is at least the last distributed build number; the build scripts reserve the next number. Add release notes in `Docs/Releases/`. Keep iOS versioning independent. See [agent release checklist](../AGENTS.md#preparing-a-release).
+2. Review the PR, wait for all CI checks on its current commit, resolve conversations, and squash merge it under the repository review rules.
 3. In a clean local checkout, switch to `main` and run `git pull --ff-only`.
 4. Run `./Tools/publish-release.sh --dry-run`, inspect its target/version, then run `./Tools/publish-release.sh` when ready to publish.
 
