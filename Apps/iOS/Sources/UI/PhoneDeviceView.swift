@@ -32,24 +32,23 @@ struct PhoneDeviceView: View {
                             .font(.callout).fixedSize(horizontal: false, vertical: true)
                     }
                 }.padding(.vertical, 8)
-            }
-            Section {
-                if session.isBusy {
-                    Button("Cancel connection", role: .cancel) { session.cancelConfirmation(); model.stopDiscovery() }
-                        .frame(minHeight: 44)
-                } else if session.phase == .connected {
-                    Button("Refresh settings") { session.refresh() }.frame(minHeight: 44)
-                    Button("Disconnect", role: .destructive) { model.disconnect() }.frame(minHeight: 44)
-                } else {
-                    Button {
-                        showingConnection = true
-                    } label: {
-                        Label("Find EarStudio", systemImage: "antenna.radiowaves.left.and.right")
-                            .frame(minHeight: 44)
-                    }.accessibilityIdentifier("device.connect")
-                }
             } footer: {
                 Text("The companion controls settings. Choose your audio output separately in iPhone Control Center.")
+            }
+            if session.phase != .connected {
+                Section {
+                    if session.isBusy {
+                        Button("Cancel connection", role: .cancel) { session.cancelConfirmation(); model.stopDiscovery() }
+                            .frame(minHeight: 44)
+                    } else {
+                        Button {
+                            showingConnection = true
+                        } label: {
+                            Label("Find EarStudio", systemImage: "antenna.radiowaves.left.and.right")
+                                .frame(minHeight: 44)
+                        }.accessibilityIdentifier("device.connect")
+                    }
+                }
             }
             SessionMessageSection()
             Section("Analog volume") {
@@ -65,6 +64,13 @@ struct PhoneDeviceView: View {
                 PhoneReadout(title: "Output mode", value: session.canEdit ? session.state.outputName : "—")
                 PhoneReadout(title: "Battery", value: session.state.loaded.contains(.battery) ? "\(session.state.battery)%" : "—")
                 PhoneReadout(title: "Firmware", value: session.state.firmware ?? "—")
+            }
+            if session.phase == .connected {
+                Section {
+                    Button("Disconnect", role: .destructive) { model.disconnect() }
+                        .frame(minHeight: 44)
+                        .accessibilityIdentifier("device.disconnect")
+                }
             }
         }
         .navigationTitle("ES100 Control")

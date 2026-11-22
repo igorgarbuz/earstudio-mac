@@ -46,6 +46,10 @@ First try reconnecting with other controller apps closed. If authorization conti
 
 ## Diagnostics
 
+**Refresh device settings** is a troubleshooting action in the **Diagnostics** section of **Settings → Diagnostics & about**. Read settings again from your EarStudio if the displayed values seem outdated; normal use does not require a manual refresh.
+
+To end the control connection, use **Disconnect** at the bottom of the **Device** page, below Signal & battery.
+
 Open **Settings → Diagnostics & about → View connection log** to inspect recent activity on a separate screen, newest first. The app keeps up to 300 entries in memory so the About page stays compact.
 
 Choose **Share diagnostics** on the Diagnostics & about page to export the log. Review the text and email it to support if useful. Device authorization keys are excluded from the exported diagnostics. Sending diagnostics is optional.

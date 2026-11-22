@@ -221,12 +221,18 @@ private struct PhoneDiagnosticsView: View {
                 Text("Firmware flashing and factory reset are not included. Audio settings live on the device; your preset library is stored on this iPhone.")
                     .font(.callout).foregroundStyle(.secondary)
                 PhoneReadout(title: "Firmware", value: s.state.firmware ?? "—")
-                Button("Refresh device settings") { s.refresh() }
-                    .frame(minHeight: 44).disabled(s.phase != .connected)
                 Button("Forget device confirmation", role: .destructive) { confirmingForget = true }
                     .frame(minHeight: 44).disabled(s.address.isEmpty)
             }
             Section {
+                VStack(alignment: .leading, spacing: 4) {
+                    Button("Refresh device settings") { s.refresh() }
+                        .frame(minHeight: 44).disabled(s.phase != .connected)
+                        .accessibilityIdentifier("diagnostics.refresh")
+                    Text("Read settings again from your EarStudio if the displayed values seem outdated.")
+                        .font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 ShareLink(item: diagnostics) { Label("Share diagnostics", systemImage: "square.and.arrow.up") }
                     .frame(minHeight: 44).accessibilityIdentifier("diagnostics.share")
                 NavigationLink {
