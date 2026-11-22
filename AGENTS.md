@@ -11,6 +11,15 @@
 - Run relevant tests from `CONTRIBUTING.md`. Before merging, check CI on the
   current PR commit and follow repository review rules.
 
+## Local development
+- For macOS builds/tests, use `./Tools/build.sh build` or `test`;
+  use `build --ad-hoc` when Developer ID credentials are unavailable.
+- For iOS simulator builds/tests, use `./Tools/build-ios.sh build` or
+  `test`; `device` only checks unsigned compilation, not installation.
+- For local iPhone installation, run `./Tools/install-ios.sh`
+  (add `--launch` to open it). The script increments the build number;
+  no marketing-version bump is needed solely for a local install.
+
 ## Release preparation
 
 - Compare changes since the target platform's latest release. Before building,
@@ -40,6 +49,7 @@
 - For new releases, use `Tools/publish-release.sh --dry-run`, then the publisher
   from a clean, pushed default-branch checkout. Check the version, commit, notes,
   and asset names; verify uploaded digests and sizes before reporting success.
-- For existing-release repairs, preserve original assets and verify the app's
-  signature/version. Update bundled text before signing, run `Tools/notarize.sh`,
-  then replace both DMG and checksum and update the release notes.
+
+## Public iOS releases
+
+- For an iOS release, after version updates and validation, run `./Tools/archive-ios.sh`.
