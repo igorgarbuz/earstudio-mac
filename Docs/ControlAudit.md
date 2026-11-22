@@ -1,4 +1,4 @@
-# Control mapping audit — Companion 1.0.6
+# Control mapping audit - Companion 1.0.6
 
 Audit date: 2026-10-07. The evidence is Android 1.9.0's `com_radsone_a_a_a_b.java` command writers and response switch, its paired disassembly, Android activities/fragments for control limits and gates, and the archived ES100 manual. [Provenance.md](Provenance.md) identifies the private evidence archive. This document records implementation checks; it does not claim every setting was exercised on physical hardware.
 

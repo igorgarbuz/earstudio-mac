@@ -133,7 +133,7 @@ final class StudioModel: ObservableObject {
     func exportDiagnostics() {
         let panel = NSSavePanel(); panel.allowedContentTypes = [.plainText]; panel.nameFieldStringValue = "EarStudio Diagnostics.txt"
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        let content = "EarStudio Companion \(AppMetadata.version) (\(AppMetadata.build))\nFirmware: \(state.firmware ?? "unknown")\n\(logs.map { "\($0.date.ISO8601Format()) \($0.text)" }.joined(separator: "\n"))\n"
+        let content = "ES100 Control \(AppMetadata.version) (\(AppMetadata.build))\nFirmware: \(state.firmware ?? "unknown")\n\(logs.map { "\($0.date.ISO8601Format()) \($0.text)" }.joined(separator: "\n"))\n"
         do { try content.write(to: url, atomically: true, encoding: .utf8) } catch { message = error.localizedDescription }
     }
 }

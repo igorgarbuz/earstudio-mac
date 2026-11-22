@@ -1,4 +1,4 @@
-# ES100 Control — Support
+# ES100 Control - Support
 
 ES100 Control is an independent iPhone companion for EarStudio ES100 and ES100 MK2 hardware. It lets you adjust device audio settings and manage equalizer presets. Compatible physical hardware is required.
 
@@ -21,10 +21,12 @@ When reporting a problem, include:
 
 1. Turn on your ES100, keep it near your iPhone, and make sure it has sufficient battery charge.
 2. Turn on Bluetooth in iPhone Settings.
-3. In **Settings → Privacy & Security → Bluetooth**, allow access for **ES100 Control**. If the app is not listed, open it and choose **Find EarStudio** to request permission.
+3. In **Settings → Privacy & Security → Bluetooth**, allow access for **ES100 Control**. If the app is not listed, open it and choose **Connect** to request permission.
 4. Close other EarStudio controller apps, including controllers on nearby computers or phones that may be connected to the device.
-5. In ES100 Control, choose **Find EarStudio**, scan, and select your device.
+5. In ES100 Control, choose **Connect**. The app reconnects to your last successfully connected device. On first use, it connects automatically if only one device is found after a short discovery window; if several are found, choose one from the list.
 6. If authorization is requested, briefly press the accessory's power button as instructed in the app.
+
+**Change device** opens the picker without automatic selection, including while connected. Devices with the same name show a short app identifier, and the previously used device is marked **Last used**. If the remembered device is unavailable, the app does not silently connect to another one; use Change device to choose a replacement.
 
 Audio pairing and the app's settings connection are separate. A working audio connection does not necessarily mean the settings connection is open.
 
@@ -42,11 +44,17 @@ Check that equalization is enabled and that audio is actually playing through th
 
 ## Authorization or reconnect problems
 
-First try reconnecting with other controller apps closed. If authorization continues to fail, use **Forget device confirmation** in **Diagnostics & about**, then reconnect and authorize again when prompted.
+First try reconnecting with other controller apps closed. If authorization continues to fail, use **Forget device authorization** in the bottom **Troubleshooting** section of **Diagnostics & about**, then reconnect and authorize again when prompted.
 
 ## Diagnostics
 
-Open **Settings → Diagnostics & about → Share diagnostics**. Review the text and email it to support if useful. Device authorization keys are excluded from the exported diagnostics. Sending diagnostics is optional.
+**Refresh device settings** is a troubleshooting action in the **Diagnostics** section of **Settings → Diagnostics & about**. Read settings again from your EarStudio if the displayed values seem outdated; normal use does not require a manual refresh. The button shows progress while reading and confirms when settings have been updated; a failed read is reported instead of showing success.
+
+To end the control connection, use **Disconnect** at the bottom of the **Device** page, below Signal & battery.
+
+Open **Settings → Diagnostics & about → View connection log** to inspect recent activity on a separate screen, newest first. The app keeps up to 300 entries in memory so the About page stays compact.
+
+Choose **Share diagnostics** on the Diagnostics & about page to export the log. Review the text and email it to support if useful. Device authorization keys are excluded from the exported diagnostics. Sending diagnostics is optional.
 
 ## Scope and privacy
 

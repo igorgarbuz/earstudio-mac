@@ -1,4 +1,4 @@
-# Contributing to EarStudio Companion
+# Contributing to ES100 Control
 
 Bug reports, documentation fixes, tests, and focused code changes are welcome. This is an independent community project for discontinued EarStudio hardware; support for every device and firmware version is not established.
 

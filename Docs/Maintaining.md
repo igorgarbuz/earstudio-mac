@@ -1,4 +1,4 @@
-# Maintaining EarStudio Companion
+# Maintaining ES100 Control
 
 Igor (`@igorgarbuz`) owns and maintains this public repository. External contributors open issues and submit PRs from forks; keep upstream write access exclusive to the maintainer. `CODEOWNERS` selects required reviewers but does not restrict who can merge an already-approved PR, so adding write collaborators would change this policy.
 

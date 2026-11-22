@@ -21,10 +21,10 @@ else
 fi
 "$project_root/Tools/build.sh" "${archive_args[@]}"
 
-archived_app="$project_root/build/Archives/EarStudioCompanion.xcarchive/Products/Applications/EarStudio Companion.app"
+archived_app="$project_root/build/Archives/EarStudioCompanion.xcarchive/Products/Applications/ES100 Control.app"
 test -d "$archived_app"
 codesign --verify --deep --strict "$archived_app"
-xcrun lipo "$archived_app/Contents/MacOS/EarStudio Companion" -verify_arch arm64 x86_64
+xcrun lipo "$archived_app/Contents/MacOS/ES100 Control" -verify_arch arm64 x86_64
 version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$archived_app/Contents/Info.plist")
 if [[ ! "$version" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
     printf 'Unexpected app version: %s\n' "$version" >&2
@@ -34,17 +34,22 @@ fi
 mkdir -p "$project_root/dist" "$project_root/build/logs"
 staging=$(mktemp -d "$project_root/build/dmg-staging.XXXXXX")
 trap 'rm -rf "$staging"' EXIT
-ditto "$archived_app" "$staging/EarStudio Companion.app"
+ditto "$archived_app" "$staging/ES100 Control.app"
 ln -s /Applications "$staging/Applications"
 cp "$project_root/LICENSE" "$staging/LICENSE.txt"
 cat >"$staging/Install.txt" <<'INSTALL'
-EarStudio Companion — macOS 14 or newer
+ES100 Control - macOS 14 or newer
+An independent companion for EarStudio ES100 and ES100 MK2.
 
-1. Quit an earlier version of EarStudio Companion before replacing it.
-2. Drag EarStudio Companion.app onto the Applications folder beside it.
-3. Eject this disk image and open EarStudio Companion from Applications.
+1. Quit an earlier version of ES100 Control before replacing it.
+2. Drag ES100 Control.app onto the Applications folder beside it.
+3. Eject this disk image and open ES100 Control from Applications.
 4. Pair your ES100 in System Settings → Bluetooth
    and choose Connect in the app.
+
+Upgrading from EarStudio Companion? Quit the old app before installing, then
+remove EarStudio Companion.app from Applications. Settings and device
+authorization remain in the same storage locations.
 
 No audio driver or separate installer is required. The app includes Apple
 Silicon and Intel code. It starts disconnected and does not change device
@@ -66,11 +71,11 @@ else
     printf '\nSignature: Developer ID Application. Notarization has not been performed.\n' >>"$staging/Install.txt"
 fi
 
-image_name="EarStudio-Companion-$version-macOS-universal.dmg"
+image_name="ES100-Control-$version-macOS-universal.dmg"
 image_path="$project_root/dist/$image_name"
 log_path="$project_root/build/logs/package.log"
 printf 'Creating %s…\n' "$image_name"
-if ! hdiutil create -srcfolder "$staging" -volname 'EarStudio Companion' \
+if ! hdiutil create -srcfolder "$staging" -volname 'ES100 Control' \
     -fs HFS+ -format UDZO -ov "$image_path" >"$log_path" 2>&1; then
     cat "$log_path" >&2
     exit 1
@@ -85,4 +90,4 @@ fi
     shasum -a 256 "$image_name" >"$image_name.sha256"
 )
 printf 'Verified DMG: %s\n' "$image_path"
-printf 'Install: open the DMG and drag EarStudio Companion into Applications.\n'
+printf 'Install: open the DMG and drag ES100 Control into Applications.\n'

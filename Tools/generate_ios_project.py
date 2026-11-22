@@ -6,7 +6,7 @@ import generate_project as g
 ROOT = g.ROOT
 PROJECT = ROOT / "EarStudioiOS.xcodeproj"
 TARGETS = {
-    "ios": ("EarStudioiOS", "EarStudio iOS.app"),
+    "ios": ("EarStudioiOS", "ES100 Control.app"),
     "ios-tests": ("EarStudioIOSTests", "EarStudioIOSTests.xctest"),
     "ios-ui-tests": ("EarStudioIOSUITests", "EarStudioIOSUITests.xctest"),
 }

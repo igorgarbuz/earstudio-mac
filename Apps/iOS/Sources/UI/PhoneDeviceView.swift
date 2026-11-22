@@ -5,7 +5,6 @@ import EarStudioUI
 
 struct PhoneDeviceView: View {
     @EnvironmentObject private var model: IOSStudioModel
-    @State private var showingConnection = false
     private var session: DeviceSession { model.session }
 
     var body: some View {
@@ -19,37 +18,41 @@ struct PhoneDeviceView: View {
                     Text("ES100 / ES100 MK2")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(StudioTheme.green)
-                    Text(session.deviceName).font(.title2.weight(.semibold))
+                    Text(session.phase == .disconnected ? (model.rememberedDevice?.name ?? session.deviceName) : session.deviceName).font(.title2.weight(.semibold))
                         .fixedSize(horizontal: false, vertical: true)
-                    Label(session.phase.rawValue, systemImage: session.canEdit ? "checkmark.circle" : "antenna.radiowaves.left.and.right")
-                        .font(.subheadline)
-                        .foregroundStyle(session.canEdit ? StudioTheme.green : .secondary)
-                    if session.isBusy {
-                        ProgressView().accessibilityLabel(session.phase.rawValue)
+                    HStack(spacing: 8) {
+                        if session.isBusy || model.scanning {
+                            ProgressView().controlSize(.small)
+                                .accessibilityHidden(true)
+                            Text(model.scanning ? "Looking for EarStudio…" : session.phase.rawValue)
+                        } else {
+                            Label(session.phase.rawValue, systemImage: session.canEdit ? "checkmark.circle" : "antenna.radiowaves.left.and.right")
+                        }
                     }
+                    .font(.subheadline)
+                    .foregroundStyle(session.canEdit ? StudioTheme.green : .secondary)
                     if session.phase == .confirmation {
                         Text("Briefly press the ES100 power button to authorize this app.")
                             .font(.callout).fixedSize(horizontal: false, vertical: true)
                     }
                 }.padding(.vertical, 8)
-            }
-            Section {
-                if session.isBusy {
-                    Button("Cancel connection", role: .cancel) { session.cancelConfirmation(); model.stopDiscovery() }
-                        .frame(minHeight: 44)
-                } else if session.phase == .connected {
-                    Button("Refresh settings") { session.refresh() }.frame(minHeight: 44)
-                    Button("Disconnect", role: .destructive) { model.disconnect() }.frame(minHeight: 44)
-                } else {
-                    Button {
-                        showingConnection = true
-                    } label: {
-                        Label("Find EarStudio", systemImage: "antenna.radiowaves.left.and.right")
-                            .frame(minHeight: 44)
-                    }.accessibilityIdentifier("device.connect")
-                }
             } footer: {
                 Text("The companion controls settings. Choose your audio output separately in iPhone Control Center.")
+            }
+            if session.phase != .connected {
+                Section {
+                    if session.isBusy || model.scanning {
+                        Button("Cancel connection", role: .cancel) { model.cancelConnection() }
+                            .frame(minHeight: 44)
+                    } else {
+                        Button {
+                            model.requestConnection()
+                        } label: {
+                            Label("Connect", systemImage: "antenna.radiowaves.left.and.right")
+                                .frame(minHeight: 44)
+                        }.accessibilityIdentifier("device.connect")
+                    }
+                }
             }
             SessionMessageSection()
             Section("Analog volume") {
@@ -66,9 +69,22 @@ struct PhoneDeviceView: View {
                 PhoneReadout(title: "Battery", value: session.state.loaded.contains(.battery) ? "\(session.state.battery)%" : "—")
                 PhoneReadout(title: "Firmware", value: session.state.firmware ?? "—")
             }
+            if !session.isBusy && !model.scanning && (model.rememberedDevice != nil || session.phase == .connected) {
+                Section {
+                    Button("Change device") { model.changeDevice() }
+                        .frame(minHeight: 44).accessibilityIdentifier("device.change")
+                }
+            }
+            if session.phase == .connected {
+                Section {
+                    Button("Disconnect", role: .destructive) { model.disconnect() }
+                        .frame(minHeight: 44)
+                        .accessibilityIdentifier("device.disconnect")
+                }
+            }
         }
         .navigationTitle("ES100 Control")
-        .sheet(isPresented: $showingConnection) { PhoneConnectionSheet() }
+        .sheet(isPresented: $model.showDevicePicker, onDismiss: { model.stopDiscovery() }) { PhoneConnectionSheet() }
         .accessibilityIdentifier("screen.device")
     }
 }
@@ -76,22 +92,39 @@ struct PhoneDeviceView: View {
 private struct PhoneConnectionSheet: View {
     @EnvironmentObject private var model: IOSStudioModel
     @Environment(\.dismiss) private var dismiss
+
+    private func connectionLabel(for device: IOSDevice) -> String {
+        var label = "Connect to \(device.name)"
+        if model.devices.filter({ $0.name == device.name }).count > 1 {
+            label += ", device \(device.id.uuidString.suffix(6))"
+        }
+        if device.id == model.rememberedDevice?.id { label += ", last used" }
+        return label
+    }
+
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    Text(IOSStudioModel.compatibilityNotice).font(.callout)
+                    Text(IOSStudioModel.compatibilityNotice)
+                        .font(.callout).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text("Turn on your EarStudio and keep it nearby. Close other EarStudio controllers before connecting.")
-                        .fixedSize(horizontal: false, vertical: true)
-                    if model.scanning { ProgressView("Looking for EarStudio…") }
-                    if let message = model.connectionMessage {
-                        Text(message).font(.callout).fixedSize(horizontal: false, vertical: true)
-                    }
                 }
                 Section("Nearby devices") {
-                    if model.devices.isEmpty {
-                        Text(model.scanning ? "Waiting for a device…" : "No EarStudio found.")
+                    if model.scanning {
+                        HStack(spacing: 12) {
+                            ProgressView().controlSize(.small)
+                                .accessibilityHidden(true)
+                            Text(model.connectionMessage ?? "Looking for nearby EarStudio devices…")
+                                .font(.callout).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    } else if let message = model.connectionMessage {
+                        Text(message).font(.callout)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else if model.devices.isEmpty {
+                        Text("No EarStudio found.")
                             .foregroundStyle(.secondary)
                     }
                     ForEach(model.devices) { device in
@@ -99,21 +132,38 @@ private struct PhoneConnectionSheet: View {
                             model.connect(device)
                             dismiss()
                         } label: {
-                            Label(device.name, systemImage: "hifispeaker")
-                                .frame(minHeight: 44)
-                        }.accessibilityIdentifier("device.result.\(device.id)")
+                            HStack(spacing: 12) {
+                                Image(systemName: "hifispeaker")
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(device.name).foregroundStyle(.primary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                    Text(device.id == model.rememberedDevice?.id ? "Last used · Tap to connect" : "Tap to connect")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                    if model.devices.filter({ $0.name == device.name }).count > 1 {
+                                        Text("Device \(device.id.uuidString.suffix(6))")
+                                            .font(.caption.monospaced()).foregroundStyle(.secondary)
+                                    }
+                                }
+                                Spacer(minLength: 0)
+                                Image(systemName: "arrow.right").accessibilityHidden(true)
+                            }
+                            .frame(minHeight: 44)
+                        }
+                        .accessibilityLabel(connectionLabel(for: device))
+                        .accessibilityIdentifier("device.result.\(device.id)")
                     }
                 }
-                Section {
-                    Button("Search again") { model.startDiscovery() }
-                        .frame(minHeight: 44).disabled(model.scanning)
+                if !model.scanning {
+                    Section {
+                        Button("Search again") { model.startDiscovery() }
+                            .frame(minHeight: 44)
+                    }
                 }
             }
             .navigationTitle("Connect")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
         }
-        .onAppear { model.startDiscovery() }
         .onDisappear { model.stopDiscovery() }
     }
 }

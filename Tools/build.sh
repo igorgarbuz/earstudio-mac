@@ -72,9 +72,9 @@ fi
 printf 'Succeeded. Log: %s\n' "$log_path"
 if [[ "$action" != test ]]; then
     if [[ "$action" == archive ]]; then
-        signed_app="$project_root/build/Archives/EarStudioCompanion.xcarchive/Products/Applications/EarStudio Companion.app"
+        signed_app="$project_root/build/Archives/EarStudioCompanion.xcarchive/Products/Applications/ES100 Control.app"
     else
-        signed_app="$project_root/build/Build/Products/Release/EarStudio Companion.app"
+        signed_app="$project_root/build/Build/Products/Release/ES100 Control.app"
     fi
     if $ad_hoc; then
         codesign --verify --deep --strict "$signed_app"
@@ -85,7 +85,7 @@ if [[ "$action" != test ]]; then
 fi
 case "$action" in
     build)
-        built_app="$project_root/build/Build/Products/Release/EarStudio Companion.app"
+        built_app="$project_root/build/Build/Products/Release/ES100 Control.app"
         version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$built_app/Contents/Info.plist")
         build_number=$(/usr/libexec/PlistBuddy -c 'Print CFBundleVersion' "$built_app/Contents/Info.plist")
         printf 'App: %s\nVersion: %s (%s)\n' "$built_app" "$version" "$build_number"

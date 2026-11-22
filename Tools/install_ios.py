@@ -92,7 +92,7 @@ def main():
     team = select_team(available, args.team)
     print(f"iPhone: {describe(device)}\nSigning team: {team}", flush=True)
     command = build_command(device, team, args.configuration)
-    app = ROOT / "build/iOS-signed/Build/Products" / f"{args.configuration}-iphoneos" / "EarStudio iOS.app"
+    app = ROOT / "build/iOS-signed/Build/Products" / f"{args.configuration}-iphoneos" / "ES100 Control.app"
     install = ["xcrun", "devicectl", "device", "install", "app", "--device", device["identifier"], str(app)]
     launch = ["xcrun", "devicectl", "device", "process", "launch", "--device", device["identifier"], BUNDLE_ID]
     if args.dry_run:
@@ -130,7 +130,7 @@ def main():
     subprocess.run(install, check=True)
     if args.launch:
         subprocess.run(launch, check=True)
-    print("Installed EarStudio on the selected iPhone.")
+    print("Installed ES100 Control on the selected iPhone.")
 
 
 if __name__ == "__main__":

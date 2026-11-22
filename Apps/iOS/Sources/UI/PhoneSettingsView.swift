@@ -221,23 +221,41 @@ private struct PhoneDiagnosticsView: View {
                 Text("Firmware flashing and factory reset are not included. Audio settings live on the device; your preset library is stored on this iPhone.")
                     .font(.callout).foregroundStyle(.secondary)
                 PhoneReadout(title: "Firmware", value: s.state.firmware ?? "—")
-                Button("Refresh device settings") { s.refresh() }
-                    .frame(minHeight: 44).disabled(s.phase != .connected)
-                Button("Forget device confirmation", role: .destructive) { confirmingForget = true }
-                    .frame(minHeight: 44).disabled(s.address.isEmpty)
             }
             Section {
+                VStack(alignment: .leading, spacing: 4) {
+                    Button { s.refresh() } label: {
+                        HStack(spacing: 8) {
+                            if s.refreshStatus == .refreshing {
+                                ProgressView().controlSize(.small).accessibilityHidden(true)
+                            }
+                            Text(s.refreshStatus == .refreshing ? "Refreshing…" : "Refresh device settings")
+                        }
+                    }
+                        .frame(minHeight: 44).disabled(s.phase != .connected || s.refreshStatus == .refreshing)
+                        .accessibilityIdentifier("diagnostics.refresh")
+                    if s.refreshStatus == .updated {
+                        Label("Settings updated", systemImage: "checkmark.circle")
+                            .font(.callout).foregroundStyle(.secondary)
+                    } else if s.refreshStatus == .failed {
+                        Text("Settings could not be refreshed. Check the connection and try again.")
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
+                    Text("Read settings again from your EarStudio if the displayed values seem outdated.")
+                        .font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 ShareLink(item: diagnostics) { Label("Share diagnostics", systemImage: "square.and.arrow.up") }
                     .frame(minHeight: 44).accessibilityIdentifier("diagnostics.share")
-                if s.logs.isEmpty { Text("No connection activity yet.").foregroundStyle(.secondary) }
-                ForEach(s.logs) { entry in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(entry.date, style: .time).font(.caption).foregroundStyle(.secondary)
-                        Text(entry.text).font(.caption.monospaced()).textSelection(.enabled)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                NavigationLink {
+                    PhoneConnectionLogView(diagnostics: diagnostics)
+                } label: {
+                    Label("View connection log", systemImage: "list.bullet.rectangle")
                 }
-            } header: { Text("Connection log") } footer: { Text("Device authorization keys are excluded from diagnostics.") }
+                .frame(minHeight: 44).accessibilityIdentifier("diagnostics.viewLog")
+            } header: { Text("Diagnostics") } footer: {
+                Text("Recent connection activity is kept in memory (up to 300 entries). Device authorization keys are excluded.")
+            }
             Section {
                 NavigationLink("Privacy policy") {
                     ScrollView {
@@ -248,11 +266,53 @@ private struct PhoneDiagnosticsView: View {
                 }
                 AboutFooter()
             }
+            Section {
+                Button("Forget device authorization", role: .destructive) { confirmingForget = true }
+                    .frame(minHeight: 44).disabled(s.address.isEmpty)
+            } header: { Text("Troubleshooting") } footer: {
+                Text("Use this if device authorization keeps failing. You will need to authorize the app again when connecting.")
+            }
         }
         .navigationTitle("Diagnostics & about").navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("Forget this device’s authorization?", isPresented: $confirmingForget, titleVisibility: .visible) {
-            Button("Forget confirmation", role: .destructive) { s.forgetKey() }
+            Button("Forget authorization", role: .destructive) { s.forgetKey() }
             Button("Cancel", role: .cancel) {}
         } message: { Text("You will need to authorize the app again on your next connection.") }
+    }
+}
+
+private struct PhoneConnectionLogView: View {
+    let diagnostics: String
+    @EnvironmentObject private var model: IOSStudioModel
+
+    var body: some View {
+        List {
+            Section {
+                if model.session.logs.isEmpty {
+                    Text("No connection activity yet.")
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(model.session.logs.reversed()) { entry in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(entry.date, style: .time)
+                            .font(.caption).foregroundStyle(.secondary)
+                        Text(entry.text).font(.caption.monospaced())
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            } header: {
+                Text("Newest first")
+            } footer: {
+                Text("Shows up to 300 recent entries. Device authorization keys are excluded.")
+            }
+        }
+        .navigationTitle("Connection log")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ShareLink(item: diagnostics) {
+                Label("Share diagnostics", systemImage: "square.and.arrow.up")
+            }
+        }
     }
 }

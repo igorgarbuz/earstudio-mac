@@ -5,11 +5,7 @@ public struct AboutFooter: View {
     public init() {}
 
     private var appName: String {
-        #if os(iOS)
         return "ES100 Control"
-        #else
-        return "EarStudio Companion"
-        #endif
     }
 
     private var version: String {

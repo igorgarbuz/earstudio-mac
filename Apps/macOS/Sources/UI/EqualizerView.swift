@@ -55,7 +55,7 @@ struct EqualizerView: View {
                 HStack {
                     Text("±12 dB").font(.system(size: 9)).foregroundStyle(StudioTheme.secondary)
                     Spacer()
-                    Button("Reset to flat") { model.applyPreset(.flat) }.buttonStyle(.plain).font(.system(size: 10)).foregroundStyle(StudioTheme.secondary).disabled(!model.available(.eq, .allGains))
+                    Button("Reset to flat") { model.session.resetEqualizerToFlat() }.buttonStyle(.plain).font(.system(size: 10)).foregroundStyle(StudioTheme.secondary).disabled(!model.available(.eq, .allGains))
                 }
             }
             HStack(alignment: .top, spacing: 18) {

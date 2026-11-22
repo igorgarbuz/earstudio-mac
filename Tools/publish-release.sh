@@ -59,7 +59,7 @@ mkdir -p "$project_root/build/logs"
 prepared_notes=$(mktemp "$project_root/build/release-notes.XXXXXX")
 trap 'rm -f "$prepared_notes"' EXIT
 cp "$notes_file" "$prepared_notes"
-image_name="EarStudio-Companion-$version-macOS-universal.dmg"
+image_name="ES100-Control-$version-macOS-universal.dmg"
 image_path="$project_root/dist/$image_name"
 checksum_path="$image_path.sha256"
 printf 'Repository: %s\nVersion: %s\nCommit: %s\nAssets: %s and its SHA-256 file\n' "$repository" "$tag" "$commit" "$image_name"
@@ -85,7 +85,7 @@ assert_pushed
 )
 # Draft first: no published release can be left without its installation files.
 gh release create "$tag" "$image_path" "$checksum_path" --repo "$repository" \
-    --target "$commit" --title "EarStudio Companion $version" \
+    --target "$commit" --title "ES100 Control $version" \
     --notes-file "$prepared_notes" --draft
 # GitHub stores the uploaded SHA-256 digest. Match bytes and size before publish.
 local_digest=$(shasum -a 256 "$image_path" | awk '{print $1}')

@@ -153,7 +153,7 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
         inquiry = scan
         guard let scan, scan.start() == kIOReturnSuccess else {
             inquiry = nil
-            onError?(TransportFailure(message: "Bluetooth discovery could not start. Turn on Bluetooth and allow EarStudio in System Settings → Privacy & Security → Bluetooth."))
+            onError?(TransportFailure(message: "Bluetooth discovery could not start. Turn on Bluetooth and allow ES100 Control in System Settings → Privacy & Security → Bluetooth."))
             onScanFinished?(); return
         }
     }
@@ -181,11 +181,11 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
         if target.addressString != nil {
             if let bundleID = Bundle.main.bundleIdentifier,
                NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).contains(where: { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }) {
-                fail("Another copy of EarStudio Companion is running. Quit the other copy, then connect again."); return
+                fail("Another copy of ES100 Control is running. Quit the other copy, then connect again."); return
             }
             let lock = FileManager.default.temporaryDirectory.appendingPathComponent("earstudio-companion-control.lock")
             guard lease.acquire(at: lock) else {
-                fail("Another EarStudio Companion process owns the control channel, or its lock could not be opened. Quit the other copy and try again."); return
+                fail("Another ES100 Control process owns the control channel, or its lock could not be opened. Quit the other copy and try again."); return
             }
         }
         // On macOS 15.7.9 the UUID-filtered overload returns success without

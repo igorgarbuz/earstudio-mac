@@ -95,7 +95,12 @@ The product photo still comes from the single shared resource bundle.
 ## iPhone behavior
 
 - **Device:** discovery, authorization progress, volume/mute, signal and battery.
-  Bluetooth permission is requested only after opening Find EarStudio.
+  Bluetooth permission is requested only after choosing Connect or Change device.
+  Connect reuses the last successful device (remembered across launches). First-use
+  discovery waits three seconds after the first result before selecting a sole
+  device; multiple results open the picker. Change device always requires selection.
+  Discovery offers retry after 15 seconds without a result; a late first result
+  still gets its full three-second selection window.
 - **Equalizer:** ten vertically stacked bands, preamp, EQ curve, processing options,
   reset, factory presets and saved presets. Import uses Files with security-scoped
   access; export uses a native document exporter. Presets retain the Mac JSON format.
@@ -126,7 +131,7 @@ Files-provider import/export, real Bluetooth permission transitions and Keychain
 authorization still need physical-iPhone exercise. No simulator scenario claims
 to validate ES100 connectivity.
 
-### Local verification — 2 November 2026
+### Local verification - 2 November 2026
 
 Verified with Xcode 26.3 and the iOS 26.3.1 simulator runtime:
 
