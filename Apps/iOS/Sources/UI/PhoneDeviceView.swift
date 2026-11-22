@@ -5,7 +5,6 @@ import EarStudioUI
 
 struct PhoneDeviceView: View {
     @EnvironmentObject private var model: IOSStudioModel
-    @State private var showingConnection = false
     private var session: DeviceSession { model.session }
 
     var body: some View {
@@ -19,13 +18,13 @@ struct PhoneDeviceView: View {
                     Text("ES100 / ES100 MK2")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(StudioTheme.green)
-                    Text(session.deviceName).font(.title2.weight(.semibold))
+                    Text(session.phase == .disconnected ? (model.rememberedDevice?.name ?? session.deviceName) : session.deviceName).font(.title2.weight(.semibold))
                         .fixedSize(horizontal: false, vertical: true)
                     HStack(spacing: 8) {
-                        if session.isBusy {
+                        if session.isBusy || model.scanning {
                             ProgressView().controlSize(.small)
                                 .accessibilityHidden(true)
-                            Text(session.phase.rawValue)
+                            Text(model.scanning ? "Looking for EarStudio…" : session.phase.rawValue)
                         } else {
                             Label(session.phase.rawValue, systemImage: session.canEdit ? "checkmark.circle" : "antenna.radiowaves.left.and.right")
                         }
@@ -42,14 +41,14 @@ struct PhoneDeviceView: View {
             }
             if session.phase != .connected {
                 Section {
-                    if session.isBusy {
-                        Button("Cancel connection", role: .cancel) { session.cancelConfirmation(); model.stopDiscovery() }
+                    if session.isBusy || model.scanning {
+                        Button("Cancel connection", role: .cancel) { model.cancelConnection() }
                             .frame(minHeight: 44)
                     } else {
                         Button {
-                            showingConnection = true
+                            model.requestConnection()
                         } label: {
-                            Label("Find EarStudio", systemImage: "antenna.radiowaves.left.and.right")
+                            Label("Connect", systemImage: "antenna.radiowaves.left.and.right")
                                 .frame(minHeight: 44)
                         }.accessibilityIdentifier("device.connect")
                     }
@@ -70,6 +69,12 @@ struct PhoneDeviceView: View {
                 PhoneReadout(title: "Battery", value: session.state.loaded.contains(.battery) ? "\(session.state.battery)%" : "—")
                 PhoneReadout(title: "Firmware", value: session.state.firmware ?? "—")
             }
+            if !session.isBusy && !model.scanning && (model.rememberedDevice != nil || session.phase == .connected) {
+                Section {
+                    Button("Change device") { model.changeDevice() }
+                        .frame(minHeight: 44).accessibilityIdentifier("device.change")
+                }
+            }
             if session.phase == .connected {
                 Section {
                     Button("Disconnect", role: .destructive) { model.disconnect() }
@@ -79,7 +84,7 @@ struct PhoneDeviceView: View {
             }
         }
         .navigationTitle("ES100 Control")
-        .sheet(isPresented: $showingConnection) { PhoneConnectionSheet() }
+        .sheet(isPresented: $model.showDevicePicker, onDismiss: { model.stopDiscovery() }) { PhoneConnectionSheet() }
         .accessibilityIdentifier("screen.device")
     }
 }
@@ -87,6 +92,16 @@ struct PhoneDeviceView: View {
 private struct PhoneConnectionSheet: View {
     @EnvironmentObject private var model: IOSStudioModel
     @Environment(\.dismiss) private var dismiss
+
+    private func connectionLabel(for device: IOSDevice) -> String {
+        var label = "Connect to \(device.name)"
+        if model.devices.filter({ $0.name == device.name }).count > 1 {
+            label += ", device \(device.id.uuidString.suffix(6))"
+        }
+        if device.id == model.rememberedDevice?.id { label += ", last used" }
+        return label
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -122,15 +137,19 @@ private struct PhoneConnectionSheet: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(device.name).foregroundStyle(.primary)
                                         .fixedSize(horizontal: false, vertical: true)
-                                    Text("Tap to connect").font(.caption)
-                                        .foregroundStyle(.secondary)
+                                    Text(device.id == model.rememberedDevice?.id ? "Last used · Tap to connect" : "Tap to connect")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                    if model.devices.filter({ $0.name == device.name }).count > 1 {
+                                        Text("Device \(device.id.uuidString.suffix(6))")
+                                            .font(.caption.monospaced()).foregroundStyle(.secondary)
+                                    }
                                 }
                                 Spacer(minLength: 0)
                                 Image(systemName: "arrow.right").accessibilityHidden(true)
                             }
                             .frame(minHeight: 44)
                         }
-                        .accessibilityLabel("Connect to \(device.name)")
+                        .accessibilityLabel(connectionLabel(for: device))
                         .accessibilityIdentifier("device.result.\(device.id)")
                     }
                 }
@@ -145,7 +164,6 @@ private struct PhoneConnectionSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
         }
-        .onAppear { model.startDiscovery() }
         .onDisappear { model.stopDiscovery() }
     }
 }

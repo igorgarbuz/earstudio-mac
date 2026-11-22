@@ -176,6 +176,12 @@
 			path = "Sources";
 			sourceTree = "<group>";
 		};
+		C3D220645A3B6FC1713CC06F = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "ConnectionSelectionTests.swift";
+			sourceTree = "<group>";
+		};
 		0CA5730FFEE382C6513D1FEB = {
 			isa = "PBXFileReference";
 			lastKnownFileType = "sourcecode.swift";
@@ -185,6 +191,7 @@
 		F04081D1DF095F4F41A1A7A0 = {
 			isa = "PBXGroup";
 			children = (
+				"C3D220645A3B6FC1713CC06F",
 				"0CA5730FFEE382C6513D1FEB",
 			);
 			path = "Tests";

@@ -21,10 +21,12 @@ When reporting a problem, include:
 
 1. Turn on your ES100, keep it near your iPhone, and make sure it has sufficient battery charge.
 2. Turn on Bluetooth in iPhone Settings.
-3. In **Settings → Privacy & Security → Bluetooth**, allow access for **ES100 Control**. If the app is not listed, open it and choose **Find EarStudio** to request permission.
+3. In **Settings → Privacy & Security → Bluetooth**, allow access for **ES100 Control**. If the app is not listed, open it and choose **Connect** to request permission.
 4. Close other EarStudio controller apps, including controllers on nearby computers or phones that may be connected to the device.
-5. In ES100 Control, choose **Find EarStudio**, scan, and select your device.
+5. In ES100 Control, choose **Connect**. The app reconnects to your last successfully connected device. On first use, it connects automatically if only one device is found after a short discovery window; if several are found, choose one from the list.
 6. If authorization is requested, briefly press the accessory's power button as instructed in the app.
+
+**Change device** opens the picker without automatic selection, including while connected. Devices with the same name show a short app identifier, and the previously used device is marked **Last used**. If the remembered device is unavailable, the app does not silently connect to another one; use Change device to choose a replacement.
 
 Audio pairing and the app's settings connection are separate. A working audio connection does not necessarily mean the settings connection is open.
 

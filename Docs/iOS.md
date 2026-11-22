@@ -95,7 +95,12 @@ The product photo still comes from the single shared resource bundle.
 ## iPhone behavior
 
 - **Device:** discovery, authorization progress, volume/mute, signal and battery.
-  Bluetooth permission is requested only after opening Find EarStudio.
+  Bluetooth permission is requested only after choosing Connect or Change device.
+  Connect reuses the last successful device (remembered across launches). First-use
+  discovery waits three seconds after the first result before selecting a sole
+  device; multiple results open the picker. Change device always requires selection.
+  Discovery offers retry after 15 seconds without a result; a late first result
+  still gets its full three-second selection window.
 - **Equalizer:** ten vertically stacked bands, preamp, EQ curve, processing options,
   reset, factory presets and saved presets. Import uses Files with security-scoped
   access; export uses a native document exporter. Presets retain the Mac JSON format.

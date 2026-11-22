@@ -176,6 +176,12 @@
 			path = "Sources";
 			sourceTree = "<group>";
 		};
+		C3D220645A3B6FC1713CC06F = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "ConnectionSelectionTests.swift";
+			sourceTree = "<group>";
+		};
 		0CA5730FFEE382C6513D1FEB = {
 			isa = "PBXFileReference";
 			lastKnownFileType = "sourcecode.swift";
@@ -185,6 +191,7 @@
 		F04081D1DF095F4F41A1A7A0 = {
 			isa = "PBXGroup";
 			children = (
+				"C3D220645A3B6FC1713CC06F",
 				"0CA5730FFEE382C6513D1FEB",
 			);
 			path = "Tests";
@@ -485,6 +492,10 @@
 			path = "EarStudioIOSTests.xctest";
 			sourceTree = "BUILT_PRODUCTS_DIR";
 		};
+		2D835D61DD8191F8EA0D50D7 = {
+			isa = "PBXBuildFile";
+			fileRef = "C3D220645A3B6FC1713CC06F";
+		};
 		7F01C86C98C08130FEEE76E4 = {
 			isa = "PBXBuildFile";
 			fileRef = "0CA5730FFEE382C6513D1FEB";
@@ -493,6 +504,7 @@
 			isa = "PBXSourcesBuildPhase";
 			buildActionMask = 2147483647;
 			files = (
+				"2D835D61DD8191F8EA0D50D7",
 				"7F01C86C98C08130FEEE76E4",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
