@@ -49,7 +49,7 @@ final class IOSBLETransport: NSObject, SessionTransport, CBCentralManagerDelegat
                 // be assumed valid across a controller reset. Start fresh later.
                 if peripheral != nil { fail("Bluetooth restarted. Reconnect to refresh the EarStudio settings channel.") }
                 return
-            case .unauthorized: fail("Allow Bluetooth access for EarStudio in iPhone Settings.")
+            case .unauthorized: fail("Allow Bluetooth access for ES100 Control in iPhone Settings.")
             case .poweredOff: fail("Turn on Bluetooth in iPhone Settings, then reconnect.")
             case .unsupported: fail("Bluetooth Low Energy is unavailable on this device.")
             default: fail("Bluetooth is unavailable. Try connecting again.")

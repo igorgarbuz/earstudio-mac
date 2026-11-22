@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Packages/EarStudioKit/Sources/EarStudioAssets/Resources/SharedAssets.xcassets/ES100Product.imageset/es100.png" alt="EarStudio ES100 product photo from the original app" width="246">
+  <img src="Packages/EarStudioKit/Sources/EarStudioAssets/Resources/SharedAssets.xcassets/ES100Product.imageset/es100.png" alt="EarStudio ES100 product photo by the project owner" width="246">
 </p>
 
 # EarStudio Companion
@@ -8,7 +8,7 @@
 
 Choose the **`.dmg` file** under **Assets**, open it, and drag **EarStudio Companion** into **Applications**. Requires macOS 14 or newer; works on Apple Silicon and Intel Macs. [Installation help](#download-and-install).
 
-> **First launch:** macOS marks browser downloads as quarantined. This release is **not notarized by Apple**, so macOS may block it with an “Apple could not verify” warning. Click **Done**, open **System Settings → Privacy & Security**, scroll down to **Security**, and click **Open Anyway** beside EarStudio Companion. Authenticate and confirm **Open**. [Detailed first-launch steps](#first-launch-on-macos).
+> **First launch:** open the app normally from Applications. The app and DMG are **Developer ID signed**, but this release is **not notarized by Apple**. If macOS blocks opening it with an “Apple could not verify” warning, follow the [first-launch instructions](#first-launch-on-macos). Signing identifies the publisher and protects integrity; it does not replace notarization.
 
 A good DAC shouldn’t spend its retirement in a drawer. The discontinued **EarStudio ES100 and ES100 MK2** still have plenty to offer: 24-bit/48 kHz USB audio on a Mac, analog volume control and a balanced headphone output. But with the original iOS and Android apps gone from their stores, owners rediscovering their devices can lose access to the settings that make them so useful.[^app-availability] I built **EarStudio Companion** to give this hardware a second life. With no official open-source app to build on, I studied decompiled code from the Android APK to understand how it talks to the firmware, then wrote an independent native macOS app. See the [research provenance](Docs/Provenance.md) for the evidence behind the implementation.
 
@@ -28,9 +28,9 @@ This is an early community release, unaffiliated with Radsone. Physical testing 
 
 Browser downloads receive macOS’s quarantine marker, which triggers Gatekeeper’s security checks. The current release is **Developer ID signed and not notarized by Apple**, so the downloaded app may show **“EarStudio Companion.app” Not Opened** and say Apple could not verify it is free of malware. A locally generated copy may open without this download warning.
 
-For the copy you intentionally downloaded from this project’s GitHub Releases:
+Open **EarStudio Companion** from **Applications** normally. If it opens, no Settings change is needed. **Only if macOS blocks opening it**, and you intentionally downloaded this copy from the project’s GitHub Releases:
 
-1. Open **EarStudio Companion** from **Applications** once so macOS displays the warning, then click **Done**.
+1. Dismiss the warning by clicking **Done**.
 2. Open the **Apple menu → System Settings → Privacy & Security**.
 3. Scroll down to the **Security** section and click **Open Anyway** beside the message about EarStudio Companion being blocked.
 4. Authenticate when prompted and confirm **Open**. You can then launch the app normally from Applications.
@@ -77,7 +77,7 @@ Controls follow recovered firmware version gates and require their settings to h
 
 The EQ matches the Android app’s **graphic equalizer**: fixed center frequencies and two Q options. It does not provide arbitrary parametric bands. The plotted curve estimates the response; the ES100 processes the audio. USB-format and hands-free-profile changes require restarting the device.
 
-Firmware flashing, factory reset, device renaming and playback transport controls are not included. An iPhone companion is also included and has been tested successfully on a physical iPhone with EarStudio hardware. See [iPhone development](Docs/iOS.md).
+Firmware flashing, factory reset, device renaming and playback transport controls are not included. An iPhone companion, **ES100 Control**, is also included and has been tested successfully on a physical iPhone with EarStudio hardware. See [iPhone development](Docs/iOS.md).
 
 ## Preset compatibility
 
@@ -133,7 +133,7 @@ Report suspected vulnerabilities privately using [SECURITY.md](SECURITY.md). [Ma
 
 ## Project and protocol documentation
 
-The repository contains the shipping macOS app and an iPhone companion, both using the local `Packages/EarStudioKit` Swift package. `EarStudioCompanion.xcodeproj` remains the macOS entry point. Platform code and signing configuration live under `Apps/macOS`; `Apps/iOS` contains the iPhone app, with its own `EarStudioiOS.xcodeproj` entry point and simulator UI tests. See [iPhone development](Docs/iOS.md) for build instructions and hardware validation limits.
+The repository contains the shipping macOS app and the **ES100 Control** iPhone companion, both using the local `Packages/EarStudioKit` Swift package. `EarStudioCompanion.xcodeproj` remains the macOS entry point. Platform code and signing configuration live under `Apps/macOS`; `Apps/iOS` contains the iPhone app, with its own `EarStudioiOS.xcodeproj` entry point and simulator UI tests. See [iPhone development](Docs/iOS.md) for build instructions and hardware validation limits.
 
 `EarStudioCore` owns the protocol, settings and presets. `EarStudioSession` owns authentication, command scheduling and readback reconciliation behind an injected transport. `EarStudioUI` provides shared bindings, theme, product image and EQ chart; `EarStudioAssets` owns the resource bundle. Shared tests run through SwiftPM, and native integration tests run through Xcode. See [Architecture](Docs/Architecture.md) for ownership, dependency rules and platform adapters.
 
@@ -164,6 +164,6 @@ The six technical PDFs are Radsone application notes and reports, rather than ch
 
 ## License
 
-The independently authored code, tests, documentation and app icon are [MIT licensed](https://github.com/igorgarbuz/earstudio-mac/blob/main/LICENSE). The Radsone PDFs in `Docs/Reference` and the original product photo in `Packages/EarStudioKit/Sources/EarStudioAssets/Resources/SharedAssets.xcassets/ES100Product.imageset` (shared by the README and Overview) are third-party materials and are not covered by that license. Vendor Android binaries and decompiled material are not distributed in this repository or its app. EarStudio and other product names belong to their respective owners.
+The independently authored code, tests, documentation and app icon are [MIT licensed](https://github.com/igorgarbuz/earstudio-mac/blob/main/LICENSE). The Radsone PDFs in `Docs/Reference` are third-party materials and are not covered by that license. The product photo shared by the README and both apps was taken and supplied by the project owner. Vendor Android binaries and decompiled material are not distributed in this repository or its app. EarStudio and other product names belong to their respective owners.
 
 [^app-availability]: App availability checked in October 2026: [AppBrain’s Android listing](https://www.appbrain.com/app/earstudio/com.dealon.earstudio) records removal from Google Play in May 2025; [Soft112’s iOS listing](https://earstudio-ios.soft112.com/earstudio-ios-alternatives.html) reports removal from the App Store. These records do not establish when or why Radsone ceased operations.

@@ -1,4 +1,4 @@
-# EarStudio Companion for iPhone
+# ES100 Control for iPhone
 
 Open the repository-root `EarStudioiOS.xcodeproj`, choose **EarStudioiOS**, and run
 on an iPhone simulator. Requires iOS 17+. For UI development without Bluetooth,

@@ -180,7 +180,7 @@ struct PhonePresetsView: View {
             } catch { session.message = error.localizedDescription }
         }
         .fileExporter(isPresented: $showingExport, document: exportDocument, contentType: .json,
-                      defaultFilename: "EarStudio Presets") { result in
+                      defaultFilename: "ES100 Control Presets") { result in
             if case .failure(let error) = result { session.message = error.localizedDescription }
         }
         .accessibilityIdentifier("screen.presets")
