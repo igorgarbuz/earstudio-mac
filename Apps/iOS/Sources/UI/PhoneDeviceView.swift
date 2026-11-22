@@ -91,18 +91,25 @@ private struct PhoneConnectionSheet: View {
         NavigationStack {
             List {
                 Section {
-                    Text(IOSStudioModel.compatibilityNotice).font(.callout)
+                    Text(IOSStudioModel.compatibilityNotice)
+                        .font(.callout).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text("Turn on your EarStudio and keep it nearby. Close other EarStudio controllers before connecting.")
-                        .fixedSize(horizontal: false, vertical: true)
-                    if model.scanning { ProgressView("Looking for EarStudio…") }
-                    if let message = model.connectionMessage {
-                        Text(message).font(.callout).fixedSize(horizontal: false, vertical: true)
-                    }
                 }
                 Section("Nearby devices") {
-                    if model.devices.isEmpty {
-                        Text(model.scanning ? "Waiting for a device…" : "No EarStudio found.")
+                    if model.scanning {
+                        HStack(spacing: 12) {
+                            ProgressView().controlSize(.small)
+                                .accessibilityHidden(true)
+                            Text(model.connectionMessage ?? "Looking for nearby EarStudio devices…")
+                                .font(.callout).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    } else if let message = model.connectionMessage {
+                        Text(message).font(.callout)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else if model.devices.isEmpty {
+                        Text("No EarStudio found.")
                             .foregroundStyle(.secondary)
                     }
                     ForEach(model.devices) { device in
@@ -110,19 +117,33 @@ private struct PhoneConnectionSheet: View {
                             model.connect(device)
                             dismiss()
                         } label: {
-                            Label(device.name, systemImage: "hifispeaker")
-                                .frame(minHeight: 44)
-                        }.accessibilityIdentifier("device.result.\(device.id)")
+                            HStack(spacing: 12) {
+                                Image(systemName: "hifispeaker")
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(device.name).foregroundStyle(.primary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                    Text("Tap to connect").font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer(minLength: 0)
+                                Image(systemName: "arrow.right").accessibilityHidden(true)
+                            }
+                            .frame(minHeight: 44)
+                        }
+                        .accessibilityLabel("Connect to \(device.name)")
+                        .accessibilityIdentifier("device.result.\(device.id)")
                     }
                 }
-                Section {
-                    Button("Search again") { model.startDiscovery() }
-                        .frame(minHeight: 44).disabled(model.scanning)
+                if !model.scanning {
+                    Section {
+                        Button("Search again") { model.startDiscovery() }
+                            .frame(minHeight: 44)
+                    }
                 }
             }
             .navigationTitle("Connect")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
         }
         .onAppear { model.startDiscovery() }
         .onDisappear { model.stopDiscovery() }

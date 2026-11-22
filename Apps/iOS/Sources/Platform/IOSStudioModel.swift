@@ -60,7 +60,7 @@ final class IOSStudioModel: NSObject, ObservableObject, CBCentralManagerDelegate
             } else {
                 self.connectionMessage = self.devices.isEmpty
                     ? "No EarStudio found. Turn it on, keep it nearby, and close other controller apps. Audio pairing alone does not open its settings channel."
-                    : "Choose your EarStudio to connect."
+                    : nil
             }
         }
         connectionMessage = "Looking for nearby EarStudio devices…"
@@ -100,6 +100,7 @@ final class IOSStudioModel: NSObject, ObservableObject, CBCentralManagerDelegate
         guard scanRequested else { return }
         switch central.state {
         case .poweredOn:
+            connectionMessage = "Looking for nearby EarStudio devices…"
             guard !central.isScanning else { return }
             for device in central.retrieveConnectedPeripherals(withServices: [CBUUID(string: GAIABLECodec.serviceUUID)]) {
                 add(device, advertisedName: nil, signal: nil)
