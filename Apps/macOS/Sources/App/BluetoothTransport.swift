@@ -153,7 +153,7 @@ final class BluetoothTransport: NSObject, ControlTransport, IOBluetoothDeviceInq
         inquiry = scan
         guard let scan, scan.start() == kIOReturnSuccess else {
             inquiry = nil
-            onError?(TransportFailure(message: "Bluetooth discovery could not start. Turn on Bluetooth and allow EarStudio in System Settings → Privacy & Security → Bluetooth."))
+            onError?(TransportFailure(message: "Bluetooth discovery could not start. Turn on Bluetooth and allow ES100 Control in System Settings → Privacy & Security → Bluetooth."))
             onScanFinished?(); return
         }
     }

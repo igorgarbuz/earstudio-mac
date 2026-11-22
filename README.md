@@ -4,7 +4,7 @@
 
 # ES100 Control
 
-An independent companion app for **EarStudio ES100 and ES100 MK2**, available for macOS and iPhone.
+An independent companion app for **EarStudio ES100 and ES100 MK2**, with native macOS and iPhone apps.
 
 **[⬇ Download for macOS - latest release](https://github.com/igorgarbuz/earstudio-mac/releases/latest)**
 
@@ -21,6 +21,8 @@ Requires **macOS 14 or newer**. Release downloads contain both **Apple Silicon a
 This is an early community release, unaffiliated with Radsone. Physical testing has covered an ES100 running firmware 2.0.2; broader MK2 and older-firmware validation remains ongoing.
 
 ## Download and install
+
+**Earlier downloads:** releases published before the rename contain **EarStudio Companion.app**. Use that name in the steps below when installing an older release.
 
 1. Download the DMG from [GitHub Releases](https://github.com/igorgarbuz/earstudio-mac/releases/latest).
 2. Quit any older version, open the DMG, and drag **ES100 Control** into **Applications**.
