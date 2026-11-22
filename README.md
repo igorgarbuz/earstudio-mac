@@ -2,15 +2,17 @@
   <img src="Packages/EarStudioKit/Sources/EarStudioAssets/Resources/SharedAssets.xcassets/ES100Product.imageset/es100.png" alt="EarStudio ES100 product photo by the project owner" width="246">
 </p>
 
-# EarStudio Companion
+# ES100 Control
 
-**[⬇ Download for macOS — latest release](https://github.com/igorgarbuz/earstudio-mac/releases/latest)**
+An independent companion app for **EarStudio ES100 and ES100 MK2**, available for macOS and iPhone.
 
-Choose the **`.dmg` file** under **Assets**, open it, and drag **EarStudio Companion** into **Applications**. Requires macOS 14 or newer; works on Apple Silicon and Intel Macs. [Installation help](#download-and-install).
+**[⬇ Download for macOS - latest release](https://github.com/igorgarbuz/earstudio-mac/releases/latest)**
+
+Choose the **`.dmg` file** under **Assets**, open it, and drag **ES100 Control** into **Applications**. Requires macOS 14 or newer; works on Apple Silicon and Intel Macs. [Installation help](#download-and-install).
 
 > **First launch:** open the app normally from Applications. The app and DMG are **Developer ID signed**, but this release is **not notarized by Apple**. If macOS blocks opening it with an “Apple could not verify” warning, follow the [first-launch instructions](#first-launch-on-macos). Signing identifies the publisher and protects integrity; it does not replace notarization.
 
-A good DAC shouldn’t spend its retirement in a drawer. The discontinued **EarStudio ES100 and ES100 MK2** still have plenty to offer: 24-bit/48 kHz USB audio on a Mac, analog volume control and a balanced headphone output. But with the original iOS and Android apps gone from their stores, owners rediscovering their devices can lose access to the settings that make them so useful.[^app-availability] I built **EarStudio Companion** to give this hardware a second life. With no official open-source app to build on, I studied decompiled code from the Android APK to understand how it talks to the firmware, then wrote an independent native macOS app. See the [research provenance](Docs/Provenance.md) for the evidence behind the implementation.
+A good DAC shouldn’t spend its retirement in a drawer. The discontinued **EarStudio ES100 and ES100 MK2** still have plenty to offer: 24-bit/48 kHz USB audio on a Mac, analog volume control and a balanced headphone output. But with the original iOS and Android apps gone from their stores, owners rediscovering their devices can lose access to the settings that make them so useful.[^app-availability] I built **ES100 Control** to give this hardware a second life. With no official open-source app to build on, I studied decompiled code from the Android APK to understand how it talks to the firmware, then wrote an independent native macOS app. See the [research provenance](Docs/Provenance.md) for the evidence behind the implementation.
 
 Adjust the device’s equalizer, output, DAC processing, inputs, ambient/call settings and battery options from a SwiftUI interface inspired by the original Android app.
 
@@ -21,30 +23,32 @@ This is an early community release, unaffiliated with Radsone. Physical testing 
 ## Download and install
 
 1. Download the DMG from [GitHub Releases](https://github.com/igorgarbuz/earstudio-mac/releases/latest).
-2. Quit any older version, open the DMG, and drag **EarStudio Companion** into **Applications**.
+2. Quit any older version, open the DMG, and drag **ES100 Control** into **Applications**.
 3. Eject the DMG and open the app from Applications.
 
 ### First launch on macOS
 
-Browser downloads receive macOS’s quarantine marker, which triggers Gatekeeper’s security checks. The current release is **Developer ID signed and not notarized by Apple**, so the downloaded app may show **“EarStudio Companion.app” Not Opened** and say Apple could not verify it is free of malware. A locally generated copy may open without this download warning.
+Browser downloads receive macOS’s quarantine marker, which triggers Gatekeeper’s security checks. The current release is **Developer ID signed and not notarized by Apple**, so the downloaded app may show **“ES100 Control.app” Not Opened** and say Apple could not verify it is free of malware. A locally generated copy may open without this download warning.
 
-Open **EarStudio Companion** from **Applications** normally. If it opens, no Settings change is needed. **Only if macOS blocks opening it**, and you intentionally downloaded this copy from the project’s GitHub Releases:
+Open **ES100 Control** from **Applications** normally. If it opens, no Settings change is needed. **Only if macOS blocks opening it**, and you intentionally downloaded this copy from the project’s GitHub Releases:
 
 1. Dismiss the warning by clicking **Done**.
 2. Open the **Apple menu → System Settings → Privacy & Security**.
-3. Scroll down to the **Security** section and click **Open Anyway** beside the message about EarStudio Companion being blocked.
+3. Scroll down to the **Security** section and click **Open Anyway** beside the message about ES100 Control being blocked.
 4. Authenticate when prompted and confirm **Open**. You can then launch the app normally from Applications.
 
 This approves this app while keeping Gatekeeper enabled. See [Apple’s instructions for opening an app that hasn’t been notarized](https://support.apple.com/en-us/102445#openanyway).
 
 Each release includes a SHA-256 checksum. Download it beside the DMG and run `shasum -a 256 -c` followed by the checksum filename to verify the download.
 
+If upgrading from **EarStudio Companion**, quit the old app, install **ES100 Control**, and remove the old **EarStudio Companion.app** from Applications to avoid keeping two copies. Existing settings and device authorization remain in the same storage locations. Older releases still use the previous name.
+
 ## Connect your EarStudio
 
-**Pair your ES100/MK2 with this Mac in macOS Bluetooth settings before choosing Connect in EarStudio Companion.** Pairing with a phone or another computer does not pair it with your Mac. The companion controls settings over Bluetooth, including when you use USB for audio; connecting a USB cable alone is not enough.
+**Pair your ES100/MK2 with this Mac in macOS Bluetooth settings before choosing Connect in ES100 Control.** Pairing with a phone or another computer does not pair it with your Mac. The companion controls settings over Bluetooth, including when you use USB for audio; connecting a USB cable alone is not enough.
 
 1. Turn on your ES100/MK2, put it in Bluetooth pairing mode if needed, and pair it with your Mac in **System Settings → Bluetooth**. If it is already paired with this Mac, skip this step.
-2. Open **EarStudio Companion**, allow Bluetooth access when prompted, choose **Connect**, and select your EarStudio.
+2. Open **ES100 Control**, allow Bluetooth access when prompted, choose **Connect**, and select your EarStudio.
 3. If device authorization is requested, briefly press its power button within three minutes. This authorizes the companion app separately from macOS Bluetooth pairing. The app remembers that authorization locally for future connections; no Keychain password is needed.
 4. Wait for settings to load before editing. To play Mac audio through EarStudio, select it separately in macOS Sound settings.
 

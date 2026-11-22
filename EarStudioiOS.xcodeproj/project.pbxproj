@@ -354,7 +354,7 @@
 		AC7869B10BFBDFC759A3C54E = {
 			isa = "PBXFileReference";
 			explicitFileType = "wrapper.application";
-			path = "EarStudio iOS.app";
+			path = "ES100 Control.app";
 			sourceTree = "BUILT_PRODUCTS_DIR";
 		};
 		5A7497E2FD0EF7481BFDF28C = {

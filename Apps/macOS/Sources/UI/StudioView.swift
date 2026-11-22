@@ -74,8 +74,8 @@ struct StudioView: View {
                     .frame(width: 31, height: 31)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("EarStudio").font(.system(size: 21, weight: .medium)).tracking(-0.6)
-                    Text("COMPANION").font(.system(size: 8, weight: .medium)).tracking(2.7).foregroundStyle(StudioTheme.secondary)
+                    Text("ES100 Control").font(.system(size: 17, weight: .medium)).tracking(-0.6).lineLimit(1)
+                    Text("FOR EARSTUDIO").font(.system(size: 8, weight: .medium)).tracking(1.5).foregroundStyle(StudioTheme.secondary)
                 }
             }.padding(.horizontal, 23).padding(.top, 50).padding(.bottom, 36)
             Text("DEVICE CONTROLS").sectionCaption().padding(.horizontal, 25).padding(.bottom, 12)

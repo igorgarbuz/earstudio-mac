@@ -555,7 +555,7 @@
 		4E783A9E10D2A8ABA38CD11C = {
 			isa = "PBXFileReference";
 			explicitFileType = "wrapper.application";
-			path = "EarStudio Companion.app";
+			path = "ES100 Control.app";
 			sourceTree = "BUILT_PRODUCTS_DIR";
 		};
 		6C7CCDEB3609F1FAA874E941 = {
@@ -808,7 +808,7 @@
 				"D71989639B8AA2110E07F1DC",
 			);
 			name = "EarStudioCompanion";
-			productName = "EarStudio Companion";
+			productName = "ES100 Control";
 			productReference = "4E783A9E10D2A8ABA38CD11C";
 			productType = "com.apple.product-type.application";
 		};

@@ -126,7 +126,7 @@ Files-provider import/export, real Bluetooth permission transitions and Keychain
 authorization still need physical-iPhone exercise. No simulator scenario claims
 to validate ES100 connectivity.
 
-### Local verification — 2 November 2026
+### Local verification - 2 November 2026
 
 Verified with Xcode 26.3 and the iOS 26.3.1 simulator runtime:
 

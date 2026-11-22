@@ -1,6 +1,6 @@
 # Repository architecture
 
-EarStudio Companion is one repository with independently integrated platform apps.
+ES100 Control is one repository with independently integrated platform apps.
 The macOS app is the only shipping app; the iPhone app is a local development target. Shared code is built as local Swift package
 modules; it is not compiled a second time as app source. No remote package or
 third-party library is required. The Mac app and its hosted tests link the single

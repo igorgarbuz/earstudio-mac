@@ -87,7 +87,7 @@ def make_project():
     groups = [folder_group(ROOT / name) for name in ("Apps", "Tools")]
     documents = [file_reference(ROOT / name) for name in ("README.md", "LICENSE")]
     app_product = add("app-product", isa="PBXFileReference", explicitFileType="wrapper.application",
-                      path="EarStudio Companion.app", sourceTree="BUILT_PRODUCTS_DIR")
+                      path="ES100 Control.app", sourceTree="BUILT_PRODUCTS_DIR")
     test_product = add("test-product", isa="PBXFileReference", explicitFileType="wrapper.cfbundle",
                        path="EarStudioCompanionTests.xctest", sourceTree="BUILT_PRODUCTS_DIR")
     products = add("products", isa="PBXGroup", children=[app_product, test_product], name="Products", sourceTree="<group>")
@@ -118,7 +118,7 @@ def make_project():
                 remoteGlobalIDString=identifier("app"), remoteInfo="EarStudioCompanion")
     dependency = add("test-dep", isa="PBXTargetDependency", target=identifier("app"), targetProxy=proxy)
     app = add("app", isa="PBXNativeTarget", buildConfigurationList=app_configs, buildPhases=app_phases,
-              buildRules=[], dependencies=[], packageProductDependencies=package_products, name="EarStudioCompanion", productName="EarStudio Companion",
+              buildRules=[], dependencies=[], packageProductDependencies=package_products, name="EarStudioCompanion", productName="ES100 Control",
               productReference=app_product, productType="com.apple.product-type.application")
     test = add("test", isa="PBXNativeTarget", buildConfigurationList=test_configs, buildPhases=test_phases,
                buildRules=[], dependencies=[dependency], packageProductDependencies=package_products, name="EarStudioCompanionTests",
@@ -137,7 +137,7 @@ def make_project():
 def buildable(parent, target):
     app = target == "app"
     ET.SubElement(parent, "BuildableReference", BuildableIdentifier="primary", BlueprintIdentifier=identifier(target),
-                  BuildableName="EarStudio Companion.app" if app else "EarStudioCompanionTests.xctest",
+                  BuildableName="ES100 Control.app" if app else "EarStudioCompanionTests.xctest",
                   BlueprintName="EarStudioCompanion" if app else "EarStudioCompanionTests",
                   ReferencedContainer="container:EarStudioCompanion.xcodeproj")
 

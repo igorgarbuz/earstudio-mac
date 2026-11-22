@@ -1,4 +1,4 @@
-PRODUCT_NAME = EarStudio iOS
+PRODUCT_NAME = ES100 Control
 PRODUCT_MODULE_NAME = EarStudioIOS
 PRODUCT_BUNDLE_IDENTIFIER = com.igor.earstudio-companion.ios
 MARKETING_VERSION = 1.0

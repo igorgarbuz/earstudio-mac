@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible problem with EarStudio Companion.
+description: Report a reproducible problem with ES100 Control.
 labels: [bug]
 body:
   - type: markdown

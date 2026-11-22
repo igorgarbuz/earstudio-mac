@@ -36,7 +36,7 @@ final class EarStudioAppDelegate: NSObject, NSApplicationDelegate {
     var terminateSecondaryInstance: () -> Void = { NSApplication.shared.terminate(nil) }
     var reportInstanceError: (Int32) -> Void = { code in
         let alert = NSAlert()
-        alert.messageText = "EarStudio Companion could not start safely"
+        alert.messageText = "ES100 Control could not start safely"
         alert.informativeText = "The application ownership lock could not be opened (error \(code)). Try reopening the app."
         alert.runModal()
     }
@@ -87,7 +87,7 @@ struct EarStudioApp: App {
     @StateObject private var model = StudioModel()
     #endif
     var body: some Scene {
-        Window("EarStudio Companion", id: "main") {
+        Window("ES100 Control", id: "main") {
             StudioView().environmentObject(model)
                 .preferredColorScheme(.dark)
                 .tint(StudioTheme.green)

@@ -1,4 +1,4 @@
-# ES100 Control — Support
+# ES100 Control - Support
 
 ES100 Control is an independent iPhone companion for EarStudio ES100 and ES100 MK2 hardware. It lets you adjust device audio settings and manage equalizer presets. Compatible physical hardware is required.
 
