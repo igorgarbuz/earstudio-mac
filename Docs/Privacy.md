@@ -1,6 +1,6 @@
-# EarStudio Companion for iPhone — Privacy policy
+# ES100 Control for iPhone - Privacy policy
 
-EarStudio Companion does not collect data or send analytics to the developer.
+ES100 Control does not collect data or send analytics to the developer.
 It contains no advertising or tracking SDKs and requires no account.
 
 Bluetooth is used to discover and control your EarStudio. Presets and preferences

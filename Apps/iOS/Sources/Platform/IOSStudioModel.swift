@@ -111,7 +111,7 @@ final class IOSStudioModel: NSObject, ObservableObject, CBCentralManagerDelegate
             connectionMessage = "Waiting for Bluetooth…"
         case .unauthorized:
             stopDiscovery()
-            connectionMessage = "Allow Bluetooth access for EarStudio in iPhone Settings, then scan again."
+            connectionMessage = "Allow Bluetooth access for ES100 Control in iPhone Settings, then scan again."
         case .poweredOff:
             stopDiscovery()
             connectionMessage = "Turn on Bluetooth in iPhone Settings, then scan again."

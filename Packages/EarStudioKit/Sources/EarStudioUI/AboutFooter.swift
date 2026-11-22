@@ -4,6 +4,14 @@ import SwiftUI
 public struct AboutFooter: View {
     public init() {}
 
+    private var appName: String {
+        #if os(iOS)
+        return "ES100 Control"
+        #else
+        return "EarStudio Companion"
+        #endif
+    }
+
     private var version: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
     }
@@ -29,15 +37,15 @@ public struct AboutFooter: View {
         components.scheme = "mailto"
         components.path = "ig@rbuz.me"
         components.queryItems = [
-            URLQueryItem(name: "subject", value: "EarStudio Companion — \(platform) support"),
-            URLQueryItem(name: "body", value: "EarStudio Companion for \(platform)\nVersion \(version) (beta) · Build \(build)\n\(revision)\n\n")
+            URLQueryItem(name: "subject", value: "\(appName) — \(platform) support"),
+            URLQueryItem(name: "body", value: "\(appName) for \(platform)\nVersion \(version) (beta) · Build \(build)\n\(revision)\n\n")
         ]
         return components.url!
     }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("EarStudio Companion").font(.subheadline.weight(.semibold))
+            Text(appName).font(.subheadline.weight(.semibold))
             Text("Version \(version) (beta) · Build \(build)")
                 .font(.caption).foregroundStyle(.secondary)
             Text(revision).font(.caption).foregroundStyle(.secondary)

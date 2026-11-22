@@ -13,8 +13,8 @@ struct PhoneDeviceView: View {
             Section {
                 VStack(alignment: .leading, spacing: 12) {
                     DeviceImage()
-                        .frame(maxWidth: .infinity)
                         .frame(height: 165)
+                        .frame(maxWidth: .infinity, alignment: .center)
                         .accessibilityHidden(true)
                     Text("ES100 / ES100 MK2")
                         .font(.caption.weight(.semibold))
@@ -67,7 +67,7 @@ struct PhoneDeviceView: View {
                 PhoneReadout(title: "Firmware", value: session.state.firmware ?? "—")
             }
         }
-        .navigationTitle("EarStudio")
+        .navigationTitle("ES100 Control")
         .sheet(isPresented: $showingConnection) { PhoneConnectionSheet() }
         .accessibilityIdentifier("screen.device")
     }

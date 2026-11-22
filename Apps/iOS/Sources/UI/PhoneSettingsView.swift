@@ -210,7 +210,7 @@ private struct PhoneDiagnosticsView: View {
     private var s: DeviceSession { model.session }
     private var diagnostics: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
-        return "EarStudio Companion for iOS \(version)\nFirmware: \(s.state.firmware ?? "unknown")\n" +
+        return "ES100 Control for iOS \(version)\nFirmware: \(s.state.firmware ?? "unknown")\n" +
             s.logs.map { "\($0.date.ISO8601Format()) \($0.text)" }.joined(separator: "\n")
     }
     var body: some View {
@@ -241,7 +241,7 @@ private struct PhoneDiagnosticsView: View {
             Section {
                 NavigationLink("Privacy policy") {
                     ScrollView {
-                        Text("EarStudio Companion does not collect data or send analytics to the developer. Bluetooth is used to discover and control your EarStudio. Presets and preferences remain on your iPhone; device authorization is stored in the iOS Keychain. Diagnostics leave the app only when you choose Share diagnostics. Files you export and links you open are handled by the destination app or service, under its privacy policy. Device backups may include app data according to your Apple settings. For privacy questions, contact the maintainer through the project’s GitHub page.")
+                        Text("ES100 Control does not collect data or send analytics to the developer. Bluetooth is used to discover and control your EarStudio. Presets and preferences remain on your iPhone; device authorization is stored in the iOS Keychain. Diagnostics leave the app only when you choose Share diagnostics. Files you export and links you open are handled by the destination app or service, under its privacy policy. Device backups may include app data according to your Apple settings. For privacy questions, contact the maintainer through the project’s GitHub page.")
                             .padding()
                     }
                     .navigationTitle("Privacy policy")

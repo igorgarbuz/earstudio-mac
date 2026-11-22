@@ -8,7 +8,7 @@ struct OverviewView: View {
         VStack(spacing: 18) {
             Panel(title: "") {
                 HStack(spacing: 30) {
-                    DeviceImage().frame(width: 220, height: 235)
+                    DeviceImage().frame(width: 220, height: 235, alignment: .center)
                     VStack(alignment: .leading, spacing: 18) {
                         Text("ES100 / ES100 MK2").sectionCaption()
                         Text(model.deviceName).font(.system(size: 33, weight: .light)).tracking(-0.8)
