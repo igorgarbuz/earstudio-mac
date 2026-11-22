@@ -242,11 +242,18 @@
 			path = "test_build_metadata.py";
 			sourceTree = "<group>";
 		};
+		0E4D6ECE404AB50FC31DE6B7 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.script.python";
+			path = "test_notarize.py";
+			sourceTree = "<group>";
+		};
 		72229507E69B070DA84DE471 = {
 			isa = "PBXGroup";
 			children = (
 				"8C62697F74151F2F921FBF65",
 				"B8F51E1A77172D7478285BE3",
+				"0E4D6ECE404AB50FC31DE6B7",
 			);
 			path = "tests";
 			sourceTree = "<group>";
@@ -317,6 +324,12 @@
 			path = "install_ios.py";
 			sourceTree = "<group>";
 		};
+		8A2FFBDCCBA0FC31113FDB80 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.script.sh";
+			path = "notarize.sh";
+			sourceTree = "<group>";
+		};
 		618F46E4AD93BE6AC9B5B884 = {
 			isa = "PBXFileReference";
 			lastKnownFileType = "text.script.sh";
@@ -344,6 +357,7 @@
 				"41EFD9176CA4A9EEC0DD7843",
 				"0690E24722A9D0F600D3C577",
 				"EB53AD8A1816EDBA0128D7DC",
+				"8A2FFBDCCBA0FC31113FDB80",
 				"618F46E4AD93BE6AC9B5B884",
 				"5D20321381D3D70B12679CF1",
 			);
