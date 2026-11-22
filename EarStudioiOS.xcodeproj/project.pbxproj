@@ -342,6 +342,12 @@
 			path = "publish-release.sh";
 			sourceTree = "<group>";
 		};
+		F003D37FCA77DD56D8CEB5BB = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.script.sh";
+			path = "regenerate-projects.sh";
+			sourceTree = "<group>";
+		};
 		627C0840A5A4CABED4844BD2 = {
 			isa = "PBXGroup";
 			children = (
@@ -360,6 +366,7 @@
 				"8A2FFBDCCBA0FC31113FDB80",
 				"618F46E4AD93BE6AC9B5B884",
 				"5D20321381D3D70B12679CF1",
+				"F003D37FCA77DD56D8CEB5BB",
 			);
 			path = "Tools";
 			sourceTree = "<group>";

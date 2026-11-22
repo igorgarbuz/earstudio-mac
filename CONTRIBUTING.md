@@ -39,7 +39,23 @@ swift test --package-path Packages/EarStudioKit
 
 Run `python3 -m unittest discover -s Tools/tests -v` when changing device installation or signing tooling. These tests use synthetic device/certificate data and do not sign or install apps on a phone.
 
-The checked-in Xcode project is ready to use. If you add or remove source files outside Xcode, run `python3 Tools/generate_project.py` and review the generated project changes. Keep build settings in `Apps/macOS/Configuration/*.xcconfig` because regeneration replaces manual project/scheme edits.
+Both checked-in Xcode projects are generated. After adding, removing, or renaming
+files, run the following **before committing or updating a PR**:
+
+```sh
+./Tools/regenerate-projects.sh
+# Review and stage the source changes and both generated projects.
+git add EarStudioCompanion.xcodeproj EarStudioiOS.xcodeproj
+./Tools/regenerate-projects.sh --check
+```
+
+Both projects include the entire `Tools/` directory, so adding a shell script or
+Python test requires regenerating **both**, even without app source changes.
+`--check` regenerates the projects and fails if they differ from the Git index;
+it leaves the generated changes available for review. CI uses the same command
+on a clean checkout. Run it after your final file additions, not just at the
+start of development. Keep build settings in the platform `.xcconfig` files;
+regeneration replaces manual project and scheme edits.
 
 ## UI development without hardware
 
@@ -54,6 +70,7 @@ automatically, and session tests can still construct `DeviceSession(demo: true)`
 
 - Keep a PR focused on one change. Discuss larger features in an issue first.
 - Add meaningful regression tests for behavior changes. Documentation-only changes need no new tests.
+- Regenerate both projects and run `./Tools/regenerate-projects.sh --check` after staging.
 - Run the relevant tests and build commands above; explain anything you could not run.
 - For device-facing changes, document what comes from protocol evidence, simulated tests, or physical observations. Include hardware/firmware details for any physical testing. Automated tests do not establish compatibility with every device or firmware.
 - Preserve write confirmation and queue behavior; do not add automatic retries of device settings writes without discussing their consequences.
