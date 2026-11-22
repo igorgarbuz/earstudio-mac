@@ -24,12 +24,12 @@ for tool in git gh swift xcodebuild shasum; do
     command -v "$tool" >/dev/null || fail "Missing required tool: $tool"
 done
 cd "$project_root"
-[[ "$(git rev-parse --show-toplevel)" == "$project_root" ]] || fail 'Run from the standalone Mac Git repository.'
+[[ "$(git rev-parse --show-toplevel)" == "$project_root" ]] || fail 'Run from the EarStudio repository.'
 assert_clean() {
     [[ -z "$(git status --porcelain --untracked-files=normal)" ]] || fail 'Commit or remove pending changes before releasing.'
 }
 assert_clean
-version=$(awk '$1 == "MARKETING_VERSION" && $2 == "=" { print $3 }' Configuration/App.xcconfig)
+version=$(awk '$1 == "MARKETING_VERSION" && $2 == "=" { print $3 }' Apps/macOS/Configuration/App.xcconfig)
 [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail 'MARKETING_VERSION must have three numeric components.'
 tag="v$version"
 commit=$(git rev-parse HEAD)
@@ -59,23 +59,27 @@ mkdir -p "$project_root/build/logs"
 prepared_notes=$(mktemp "$project_root/build/release-notes.XXXXXX")
 trap 'rm -f "$prepared_notes"' EXIT
 cp "$notes_file" "$prepared_notes"
-image_name="EarStudio-Companion-$version-macOS-universal.dmg"
+image_name="ES100-Control-$version-macOS-universal.dmg"
 image_path="$project_root/dist/$image_name"
 checksum_path="$image_path.sha256"
 printf 'Repository: %s\nVersion: %s\nCommit: %s\nAssets: %s and its SHA-256 file\n' "$repository" "$tag" "$commit" "$image_name"
 if $dry_run; then
-    printf 'Dry run: would run both test suites, package, upload a draft, verify assets, then publish.\n'
+    printf 'Dry run: would run both test suites, package and notarize, upload a draft, verify assets, then publish.\n'
     exit 0
 fi
 [[ "$(gh repo view "$repository" --json isPrivate --jq '.isPrivate')" == false ]] \
     || fail 'The repository must be public before publishing this public release.'
+"$project_root/Tools/notarize.sh" --check-credentials
 printf 'Running core tests…\n'
-if ! swift test --package-path "$project_root" >"$project_root/build/logs/core-test.log" 2>&1; then
+if ! swift test --package-path "$project_root/Packages/EarStudioKit" >"$project_root/build/logs/core-test.log" 2>&1; then
     tail -n 80 "$project_root/build/logs/core-test.log" >&2
     fail 'Core tests failed.'
 fi
 "$project_root/Tools/build.sh" test
 "$project_root/Tools/package.sh"
+# Never upload a public release without a valid stapled ticket and Gatekeeper acceptance.
+xcrun stapler validate "$image_path"
+spctl --assess --type open --context context:primary-signature --verbose=2 "$image_path"
 assert_clean
 [[ "$(git rev-parse HEAD)" == "$commit" ]] || fail 'HEAD changed while preparing the release.'
 assert_pushed
@@ -85,7 +89,7 @@ assert_pushed
 )
 # Draft first: no published release can be left without its installation files.
 gh release create "$tag" "$image_path" "$checksum_path" --repo "$repository" \
-    --target "$commit" --title "EarStudio Companion $version" \
+    --target "$commit" --title "ES100 Control $version" \
     --notes-file "$prepared_notes" --draft
 # GitHub stores the uploaded SHA-256 digest. Match bytes and size before publish.
 local_digest=$(shasum -a 256 "$image_path" | awk '{print $1}')

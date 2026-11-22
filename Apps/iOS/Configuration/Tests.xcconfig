@@ -1,0 +1,7 @@
+PRODUCT_NAME = EarStudioIOSTests
+PRODUCT_BUNDLE_IDENTIFIER = com.igor.earstudio-companion.ios.tests
+GENERATE_INFOPLIST_FILE = YES
+TEST_HOST = $(BUILT_PRODUCTS_DIR)/ES100 Control.app/ES100 Control
+BUNDLE_LOADER = $(TEST_HOST)
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks @loader_path/Frameworks
+SKIP_INSTALL = YES

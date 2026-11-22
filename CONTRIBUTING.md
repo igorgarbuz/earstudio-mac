@@ -1,4 +1,4 @@
-# Contributing to EarStudio Companion
+# Contributing to ES100 Control
 
 Bug reports, documentation fixes, tests, and focused code changes are welcome. This is an independent community project for discontinued EarStudio hardware; support for every device and firmware version is not established.
 
@@ -28,19 +28,49 @@ To build and test with the project's tested toolchain, use macOS 15.6 or newer a
 From the repository root, the CI-equivalent commands are:
 
 ```sh
-swift test
+swift test --package-path Packages/EarStudioKit
 ./Tools/build.sh test
-./Tools/build.sh build
+./Tools/build.sh build --ad-hoc
+./Tools/build-ios.sh build
+./Tools/build-ios.sh test
 ```
 
-`swift test` runs headless protocol/core tests. The Xcode suite also covers app-specific behavior with simulated transports, and the Release build includes Apple Silicon and Intel architectures. Build scripts use local ad-hoc signing; no developer account, signing certificate, or API credentials are needed. Generated outputs stay in the ignored `.build/`, `build/`, and `dist/` directories.
+`swift test --package-path Packages/EarStudioKit` runs headless protocol, session and control-binding tests. The Xcode suite covers macOS integration and connection lifecycle with simulated transports, and the Release build includes Apple Silicon and Intel architectures. Tests and the explicit `--ad-hoc` CI build need no developer account or signing certificate. Default macOS Release builds and archives require Developer ID Application signing; see [signing setup](Docs/Maintaining.md#signing-local-builds). Generated outputs stay in the ignored `.build/`, `build/`, and `dist/` directories.
 
-The checked-in Xcode project is ready to use. If you add or remove source files outside Xcode, run `python3 Tools/generate_project.py` and review the generated project changes. Keep build settings in `Configuration/*.xcconfig` because regeneration replaces manual project/scheme edits.
+Run `python3 -m unittest discover -s Tools/tests -v` when changing device installation or signing tooling. These tests use synthetic device/certificate data and do not sign or install apps on a phone.
+
+Both checked-in Xcode projects are generated. After adding, removing, or renaming
+files, run the following **before committing or updating a PR**:
+
+```sh
+./Tools/regenerate-projects.sh
+# Review and stage the source changes and both generated projects.
+git add EarStudioCompanion.xcodeproj EarStudioiOS.xcodeproj
+./Tools/regenerate-projects.sh --check
+```
+
+Both projects include the entire `Tools/` directory, so adding a shell script or
+Python test requires regenerating **both**, even without app source changes.
+`--check` regenerates the projects and fails if they differ from the Git index;
+it leaves the generated changes available for review. CI uses the same command
+on a clean checkout. Run it after your final file additions, not just at the
+start of development. Keep build settings in the platform `.xcconfig` files;
+regeneration replaces manual project and scheme edits.
+
+## UI development without hardware
+
+Both apps accept `--demo` as a launch argument in **Debug builds only**. In Xcode,
+add it under **Edit Scheme → Run → Arguments → Arguments Passed On Launch**.
+This loads editable sample device state without Bluetooth; the status identifies
+demo mode. There are no demo buttons or menus. Relaunch without the flag to return
+to normal operation. Release builds ignore `--demo`. The iPhone UI tests pass it
+automatically, and session tests can still construct `DeviceSession(demo: true)`.
 
 ## Preparing a pull request
 
 - Keep a PR focused on one change. Discuss larger features in an issue first.
 - Add meaningful regression tests for behavior changes. Documentation-only changes need no new tests.
+- Regenerate both projects and run `./Tools/regenerate-projects.sh --check` after staging.
 - Run the relevant tests and build commands above; explain anything you could not run.
 - For device-facing changes, document what comes from protocol evidence, simulated tests, or physical observations. Include hardware/firmware details for any physical testing. Automated tests do not establish compatibility with every device or firmware.
 - Preserve write confirmation and queue behavior; do not add automatic retries of device settings writes without discussing their consequences.
@@ -58,3 +88,9 @@ Igor (`@igorgarbuz`) is the maintainer and code owner for all files. Contributio
 Maintainer-authored PRs still go through CI and a PR. GitHub does not allow authors to approve their own PRs, so the maintainer has a PR-only bypass of the review ruleset. See [Docs/Maintaining.md](Docs/Maintaining.md) for the settings and release process.
 
 Please follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Code ownership and sharing
+
+Read [Architecture](Docs/Architecture.md) before adding shared or platform-specific code. Put shared behavior in the appropriate package module, never add package source files to an app target, and load shared imagery through `EarStudioAssets.bundle`. Keep desktop navigation and Bluetooth APIs under `Apps/macOS`. The iOS package compile check does not validate a real iPhone connection.
+
+For iPhone work, see [iOS development](Docs/iOS.md). Regenerate `EarStudioiOS.xcodeproj` with `python3 Tools/generate_ios_project.py` when adding app/test sources. Run `./Tools/build-ios.sh test` on a compact and a larger iPhone simulator before claiming UI compatibility.

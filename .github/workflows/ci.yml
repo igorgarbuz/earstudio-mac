@@ -32,7 +32,9 @@ jobs:
           xcodebuild -version
           swift --version
       - name: Run protocol and core tests
-        run: swift test
+        run: swift test --package-path Packages/EarStudioKit
+      - name: Run signing and installation tooling tests
+        run: python3 -m unittest discover -s Tools/tests -v
 
   macos-build-and-tests:
     name: macOS build and tests
@@ -45,7 +47,25 @@ jobs:
           persist-credentials: false
       - name: Show toolchain
         run: xcodebuild -version
+      - name: Verify generated project is current
+        run: ./Tools/regenerate-projects.sh --check
       - name: Run native XCTest suite
         run: ./Tools/build.sh test
       - name: Build universal Release app
-        run: ./Tools/build.sh build
+        run: ./Tools/build.sh build --ad-hoc
+
+  ios-build-and-tests:
+    name: iPhone build and tests
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Verify generated iPhone project
+        run: ./Tools/regenerate-projects.sh --check
+      - name: Build iPhone Simulator app
+        run: ./Tools/build-ios.sh build
+      - name: Run iPhone unit and layout tests
+        run: ./Tools/build-ios.sh test

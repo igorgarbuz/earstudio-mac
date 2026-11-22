@@ -1,0 +1,470 @@
+import Foundation
+import Combine
+import EarStudioCore
+
+public enum ConnectionPhase: String {
+    case disconnected = "Not connected"
+    case connecting = "Connecting"
+    case retrying = "Retrying settings connection"
+    case recovering = "Restoring Bluetooth connection"
+    case authenticating = "Authenticating"
+    case confirmation = "Press the power button"
+    case syncing = "Reading device"
+    case connected = "Connected"
+    case demo = "Demo mode"
+}
+
+public enum SettingsRefreshStatus { case idle, refreshing, updated, failed }
+
+public struct LogEntry: Identifiable {
+    public let id = UUID()
+    public let date = Date()
+    public let text: String
+}
+
+/// Shared device state machine. Call on the main thread, including transport callbacks.
+public final class DeviceSession: ObservableObject {
+    private enum ConnectionAttempt { case initial, controlRetry, afterReset }
+    @Published public private(set) var state = DeviceState()
+    @Published public private(set) var phase = ConnectionPhase.disconnected
+    @Published public private(set) var deviceName = "EarStudio ES100"
+    @Published public private(set) var address = ""
+    @Published public private(set) var refreshStatus = SettingsRefreshStatus.idle
+    @Published public private(set) var pendingCount = 0
+    @Published public private(set) var logs: [LogEntry] = []
+    @Published public private(set) var presets: [EQPreset] = []
+    @Published public var message: String?
+    @Published public var presetName = "Custom"
+    private var transport: SessionTransport?
+    private var closingTransport: SessionTransport?
+    private let saveDeviceKey: (UInt16, String) -> Bool
+    private let readDeviceKey: (String) -> UInt16
+    private let forgetDeviceKey: (String) -> Bool
+    private var selectedDevice: DeviceConnection?
+    private var decoder = GAIAStreamDecoder()
+    private var queue = CommandQueue()
+    private var confirmed = DeviceState()
+    private var effects: [UUID: (inout DeviceState) -> Void] = [:]
+    private var timer: Timer?
+    private var authTimer: Timer?
+    private var syncTimer: Timer?
+    private var refreshTimer: Timer?
+    private var flushWork: DispatchWorkItem?
+    private var readbackWork: DispatchWorkItem?
+    private var needsRefresh: Set<DeviceCommand> = []
+    private var unsupported: Set<DeviceCommand> = []
+    private var generation = UUID()
+    private var isAuthenticated = false
+    private let defaults: UserDefaults
+
+    public init(demo: Bool = false, defaults: UserDefaults,
+                saveDeviceKey: @escaping (UInt16, String) -> Bool,
+                readDeviceKey: @escaping (String) -> UInt16,
+                forgetDeviceKey: @escaping (String) -> Bool) {
+        self.saveDeviceKey = saveDeviceKey
+        self.readDeviceKey = readDeviceKey
+        self.forgetDeviceKey = forgetDeviceKey
+        self.defaults = defaults
+        if let data = defaults.data(forKey: "presets"), let loaded = try? PresetFile.decode(data) { presets = loaded }
+        if demo { enterDemo() }
+    }
+    public var isDemo: Bool { phase == .demo }
+    public var hasSelectedDevice: Bool { selectedDevice != nil }
+    public var canEdit: Bool { phase == .connected || isDemo }
+    public var isBusy: Bool { [.connecting, .retrying, .recovering, .authenticating, .confirmation, .syncing].contains(phase) }
+    private var isOpening: Bool { phase == .connecting || phase == .retrying }
+    public func available(_ group: StateGroup, _ command: DeviceCommand? = nil) -> Bool {
+        guard canEdit, state.loaded.contains(group) else { return false }
+        guard let command else { return true }
+        return !unsupported.contains(command) && command.supported(by: state)
+            && (command.confirmationReadback.map { !unsupported.contains($0) } ?? true)
+            && (command.stateGroup.map { state.loaded.contains($0) } ?? true)
+    }
+
+    public func reconnectSelectedDevice() {
+        guard !isBusy, let selectedDevice else { return }
+        connect(selectedDevice)
+    }
+    public func connect(_ device: DeviceConnection) {
+        // Let the previous control channel finish closing before opening another.
+        let request = UUID()
+        disconnect { [weak self] in
+            DispatchQueue.main.async {
+                guard let self, self.generation == request else { return }
+                self.startConnection(device)
+            }
+        }
+        generation = request; phase = .connecting; message = nil
+    }
+    private func startConnection(_ device: DeviceConnection, attempt: ConnectionAttempt = .initial) {
+        generation = UUID()
+        let current = generation
+        deviceName = device.name; address = device.id
+        selectedDevice = device
+        phase = attempt == .controlRetry ? .retrying : .connecting; message = nil
+        confirmed = DeviceState(); state = confirmed; presetName = "Device settings"
+        let link = device.makeTransport()
+        link.onDiagnostic = { [weak self] in self?.log($0) }
+        link.onOpen = { [weak self] in
+            guard let self, self.generation == current else { return }
+            self.phase = .authenticating
+            self.log("Control channel opened. Authenticating.")
+            self.sendNow(.authenticate, Wire.u16(self.readDeviceKey(self.address)))
+            self.authTimer = Timer.scheduledTimer(withTimeInterval: 180, repeats: false) { [weak self] _ in
+                self?.connectionFailed("Device confirmation timed out. Reconnect and briefly press the ES100 power button when prompted.")
+            }
+        }
+        link.onData = { [weak self] in
+            guard let self, self.generation == current else { return }; self.receive($0)
+        }
+        link.onClose = { [weak self] in
+            guard let self, self.generation == current else { return }
+            if self.isOpening, attempt != .afterReset {
+                self.log("Control channel closed while opening.")
+                self.retryOpening(device, attempt: attempt, allowsControlRetry: true)
+                return
+            }
+            self.disconnect(); self.message = "ES100 disconnected. Your saved presets are still available."
+        }
+        link.onError = { [weak self] failure in
+            guard let self, self.generation == current else { return }
+            if self.isOpening, attempt != .afterReset, failure.allowsLinkReset {
+                self.log(failure.message)
+                self.retryOpening(device, attempt: attempt, allowsControlRetry: failure.allowsControlRetry)
+            } else {
+                self.connectionFailed(failure.message + " Try Connect again when the device is ready.")
+            }
+        }
+        transport = link; link.open()
+    }
+    private func retryOpening(_ device: DeviceConnection, attempt: ConnectionAttempt, allowsControlRetry: Bool) {
+        guard attempt == .initial, allowsControlRetry else {
+            recoverBluetoothConnection(device)
+            return
+        }
+        // Close only RFCOMM, then rediscover the service on the existing link.
+        // Do not reset A2DP or replay any authentication/settings commands.
+        let request = UUID()
+        log("Retrying the settings channel without resetting Bluetooth audio.")
+        disconnect { [weak self] in
+            DispatchQueue.main.async {
+                guard let self, self.generation == request else { return }
+                self.startConnection(device, attempt: .controlRetry)
+            }
+        }
+        generation = request; phase = .retrying; message = nil
+    }
+    public func disconnect(completion: @escaping () -> Void = {}) {
+        refreshStatus = refreshStatus == .refreshing ? .failed : .idle
+        generation = UUID()
+        timer?.invalidate(); authTimer?.invalidate(); syncTimer?.invalidate(); refreshTimer?.invalidate(); flushWork?.cancel(); readbackWork?.cancel()
+        timer = nil; authTimer = nil; refreshTimer = nil
+        let previous = transport ?? closingTransport
+        transport = nil; closingTransport = previous
+        queue.reset(); effects.removeAll(); needsRefresh.removeAll(); unsupported.removeAll(); decoder.reset()
+        pendingCount = 0; isAuthenticated = false; phase = .disconnected
+        confirmed = DeviceState(); state = confirmed
+        if let previous {
+            previous.close { [weak self, weak previous] in
+                if self?.closingTransport === previous { self?.closingTransport = nil }
+                completion()
+            }
+        }
+        else { completion() }
+    }
+    /// One recovery inside a user-initiated Connect attempt. This closes the
+    /// baseband link, briefly interrupting audio, before one final control open.
+    /// It never retries a setting write or removes pairing/confirmation keys.
+    private func recoverBluetoothConnection(_ device: DeviceConnection) {
+        guard let resetLink = device.resetLink else {
+            connectionFailed("The settings connection could not be opened. Try Connect again when the device is ready.")
+            return
+        }
+        let request = UUID()
+        disconnect { [weak self] in
+            DispatchQueue.main.async {
+                guard let self, self.generation == request else { return }
+                self.log("Resetting the EarStudio Bluetooth link; audio will briefly disconnect.")
+                self.timer = Timer.scheduledTimer(withTimeInterval: 20, repeats: false) { [weak self] _ in
+                    guard let self, self.generation == request else { return }
+                    self.connectionFailed("The system did not finish resetting the Bluetooth link. Disconnect and reconnect EarStudio in Bluetooth settings, then try again.")
+                }
+                resetLink { [weak self] result in
+                    guard let self, self.generation == request else { return }
+                    self.timer?.invalidate(); self.timer = nil
+                    if case .failure(let error) = result {
+                        self.connectionFailed(error.localizedDescription)
+                        return
+                    }
+                    self.log("Bluetooth link reset completed.")
+                    self.startConnection(device, attempt: .afterReset)
+                }
+            }
+        }
+        generation = request; phase = .recovering; message = nil
+    }
+    public func cancelConfirmation() {
+        if phase == .confirmation { sendNow(.cancelAuthentication) }
+        disconnect()
+    }
+    public func enterDemo() {
+        disconnect(); phase = .demo; deviceName = "EarStudio ES100"; address = ""
+        confirmed = .demo; state = confirmed; presetName = "Custom"
+        message = nil
+    }
+    public func forgetKey() {
+        guard !address.isEmpty else { return }
+        guard forgetDeviceKey(address) else {
+            message = "Could not remove the saved device confirmation. Please try again."
+            return
+        }
+        disconnect()
+        message = "Saved device confirmation removed. Press the ES100 power button on your next connection."
+    }
+    private func connectionFailed(_ text: String) { log(text); disconnect(); message = text }
+    private func sendNow(_ command: DeviceCommand, _ payload: [UInt8] = []) {
+        _ = transport?.send(command.packet(payload).encoded())
+    }
+    private func receive(_ data: Data) {
+        for packet in decoder.append(data) {
+            guard packet.vendor == GAIAPacket.earStudioVendor, packet.isAcknowledgement, let status = packet.status else { continue }
+            // Never include a device authentication key in diagnostic output.
+            log(String(format: "← %04X · status %d · %d bytes", packet.id, status, packet.payload.count))
+            if packet.id == 0x0302, status == 0 {
+                phase = .confirmation
+                continue
+            }
+            if packet.id == 0x0303, status == 0 {
+                guard packet.payload.count >= 3 else { continue }
+                if !saveDeviceKey(Wire.readU16(packet.payload, 1), address) {
+                    message = "Connected, but the device confirmation could not be saved. You may need to press the ES100 power button again next time."
+                }
+                authTimer?.invalidate(); authTimer = nil
+                isAuthenticated = true; phase = .syncing
+                syncTimer?.invalidate()
+                syncTimer = Timer.scheduledTimer(withTimeInterval: 25, repeats: false) { [weak self] _ in
+                    guard let self, self.phase == .syncing else { return }
+                    self.connectionFailed("ES100 did not return all required settings. Reconnect, or export diagnostics to investigate firmware compatibility.")
+                }
+                refresh()
+                continue
+            }
+            if packet.id == 0x0304 {
+                connectionFailed("ES100 declined the connection. Reconnect and press its power button when prompted."); return
+            }
+            if packet.id == DeviceCommand.authenticate.rawValue, status != 0 {
+                connectionFailed("Device authentication failed (status \(status))."); return
+            }
+            let finished = queue.acknowledge(packet)
+            let isReadback = finished?.command.confirmationReadback?.rawValue == packet.id
+            if finished != nil { timer?.invalidate(); timer = nil; readbackWork?.cancel(); readbackWork = nil }
+            if let finished, status != 0 {
+                let rejected = isReadback ? (finished.command.confirmationReadback ?? finished.command) : finished.command
+                if status == 1 { unsupported.insert(rejected) }
+                commandFailed("ES100 rejected \(commandName(rejected)) (status \(status)). Settings have been restored to their last confirmed values.")
+                continue
+            }
+            if let finished, isReadback, !finished.command.hasReadbackFields(in: packet) {
+                commandFailed("The device returned an incomplete \(commandName(finished.command.confirmationReadback!)) reply. Use Refresh to check its settings.")
+                continue
+            }
+            if let finished {
+                let effect = effects.removeValue(forKey: finished.token)
+                if !isReadback {
+                    effect?(&confirmed)
+                    if let refresh = finished.command.refresh { needsRefresh.insert(refresh) }
+                }
+            }
+            let applied = confirmed.apply(packet)
+            if let finished, (finished.command.isRead || isReadback), !applied {
+                let query = isReadback ? (finished.command.confirmationReadback ?? finished.command) : finished.command
+                commandFailed("The device returned an incomplete \(commandName(query)) reply. Reconnect or export diagnostics to check firmware compatibility.")
+                continue
+            }
+            if let finished, isReadback, !finished.command.matchesReadback(finished.payload, state: confirmed) {
+                let setting = finished.command.confirmationReadback == .eq ? "equalizer" : commandName(finished.command)
+                commandFailed("ES100 did not apply the \(setting) change. The controls now show the settings read from your device.")
+                continue
+            }
+            rebuildState()
+            if isAuthenticated, phase == .syncing, confirmed.firmware != nil, confirmed.loaded.isSuperset(of: [.audio, .eq, .info]) {
+                phase = .connected
+                syncTimer?.invalidate(); syncTimer = nil
+                refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+                    guard let self, self.phase == .connected, self.pendingCount == 0 else { return }
+                    self.enqueue(.battery)
+                }
+            }
+            pump()
+        }
+    }
+    public func refresh() {
+        guard isAuthenticated, refreshStatus != .refreshing else { return }
+        if phase == .connected {
+            refreshStatus = .refreshing
+            message = nil
+        }
+        // Read firmware first; it determines the layouts of information and EQ.
+        for command: DeviceCommand in [.deviceDetails, .deviceInfo, .state, .battery, .eq] { enqueue(command, start: false) }
+        pump()
+    }
+    private func enqueue(_ command: DeviceCommand, _ payload: [UInt8] = [], start: Bool = true) {
+        guard !unsupported.contains(command) else { return }
+        queue.enqueue(.init(command: command, payload: payload, key: "read-\(command.rawValue)"))
+        if start { pump() }
+    }
+    private func pump() {
+        guard isAuthenticated else { return }
+        if queue.inFlight == nil, queue.pending.isEmpty, !needsRefresh.isEmpty {
+            let queries = needsRefresh.sorted { $0.rawValue < $1.rawValue }; needsRefresh.removeAll()
+            for query in queries { enqueue(query, start: false) }
+        }
+        pendingCount = queue.pending.count + (queue.inFlight == nil ? 0 : 1)
+        guard let item = queue.next() else {
+            if refreshStatus == .refreshing, pendingCount == 0 { refreshStatus = .updated }
+            return
+        }
+        pendingCount = queue.pending.count + 1
+        log(String(format: "→ %04X · %d bytes", item.command.rawValue, item.payload.count))
+        let current = generation
+        timer = Timer.scheduledTimer(withTimeInterval: 4, repeats: false) { [weak self] _ in
+            guard let self, self.generation == current, self.queue.inFlight?.token == item.token else { return }
+            let setting = item.command.confirmationReadback == .eq ? "equalizer" : self.commandName(item.command)
+            let text = item.command.confirmationReadback == nil
+                ? "No reply to \(self.commandName(item.command)). Check the device connection, then use Refresh."
+                : "Could not read back the \(setting) settings. The change may have reached ES100. Use Refresh to check."
+            self.commandFailed(text)
+        }
+        if transport?.send(item.packet.encoded()) != true {
+            if generation == current { connectionFailed("The control channel is no longer writable. Reconnect to ES100.") }
+            return
+        }
+        if item.command.confirmationReadback != nil {
+            // Leave a short settling interval, then query even if no write ACK arrives.
+            // Keep this transaction in flight so later edits cannot overtake its readback.
+            let work = DispatchWorkItem { [weak self] in
+                guard let self, self.generation == current,
+                      let query = self.queue.beginReadback(for: item.token) else { return }
+                self.log(String(format: "→ %04X · 0 bytes · verifying %@", query.rawValue, self.commandName(item.command)))
+                if self.transport?.send(query.packet().encoded()) != true, self.generation == current {
+                    self.connectionFailed("The control channel is no longer writable. Reconnect to ES100.")
+                }
+            }
+            readbackWork = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: work)
+        }
+    }
+    private func commandFailed(_ text: String) {
+        if refreshStatus == .refreshing { refreshStatus = .failed }
+        if phase == .syncing { connectionFailed(text); return }
+        timer?.invalidate(); timer = nil; flushWork?.cancel(); readbackWork?.cancel(); readbackWork = nil
+        queue.reset(); effects.removeAll(); needsRefresh.removeAll(); pendingCount = 0
+        rebuildState(); message = text; log(text)
+        // No automatic retries: a volume or power change may have reached the device.
+    }
+    private func rebuildState() {
+        var next = confirmed
+        if let item = queue.inFlight { effects[item.token]?(&next) }
+        for item in queue.pending { effects[item.token]?(&next) }
+        state = next
+    }
+    public func change(_ command: DeviceCommand, payload: [UInt8], key: String? = nil, mutate: @escaping (inout DeviceState) -> Void) {
+        guard let group = command.stateGroup, available(group, command) else { return }
+        if command == .usbBits, !state.supportsQ, payload.first == 2 { return }
+        if isDemo { mutate(&confirmed); state = confirmed; return }
+        let commandKey = key ?? "set-\(command.rawValue)"
+        for old in queue.pending where old.key == commandKey { effects.removeValue(forKey: old.token) }
+        let item = CommandQueue.Item(command: command, payload: payload, key: commandKey)
+        effects[item.token] = mutate
+        queue.enqueue(item); rebuildState()
+        pendingCount = queue.pending.count + (queue.inFlight == nil ? 0 : 1)
+        flushWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.pump() }
+        flushWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: work)
+    }
+    public func setQ(_ value: Int) {
+        guard [2896, 5791].contains(value), state.supportsQ else { return }
+        change(.q, payload: Wire.u16(UInt16(value))) { $0.q = value }
+        if canEdit { presetName = "Custom" }
+    }
+    public func setHeadroom(_ mode: Int, compensation: Bool) {
+        guard [1, 2].contains(mode), state.supportsHeadroom else { return }
+        change(.headroom, payload: [UInt8(mode | (compensation ? 16 : 0))]) { $0.headroom = mode; $0.analogCompensation = compensation }
+        if canEdit { presetName = "Custom" }
+    }
+    public func setOutput(_ mode: Int) {
+        guard (0...3).contains(mode), !state.outputLocked else { return }
+        let single = mode < 2, high = mode % 2 == 1
+        change(.outputMode, payload: [(single ? 1 : 0) | (high ? (single ? 64 : 32) : 0)]) { $0.outputMode = mode }
+    }
+    public func setTrim(left: Double, right: Double) {
+        guard left.isFinite, right.isFinite else { return }
+        let left = min(0, max(-6, left)), right = min(0, max(-6, right))
+        change(.trim, payload: Wire.volume(left) + Wire.volume(right)) { $0.leftTrim = left; $0.rightTrim = right }
+    }
+    public func setJitter(usb: Bool, bluetooth: Bool) {
+        change(.jitter, payload: [(usb ? 1 : 0) | (bluetooth ? 2 : 0)]) { $0.jitterUSB = usb; $0.jitterBluetooth = bluetooth }
+    }
+    public func setCodecs(aac: Bool, aptx: Bool, hd: Bool) {
+        change(.codecs, payload: [UInt8(1 | (aac ? 2 : 0) | (aptx ? 4 : 0) | (hd ? 8 : 0))]) { $0.aac = aac; $0.aptx = aptx; $0.aptxHD = hd }
+    }
+    public func setMic(ambient: Bool, preamp: Bool, gain: Int) {
+        let gain = min(22, max(0, gain))
+        change(ambient ? .ambientMic : .mic, payload: [UInt8((preamp ? 128 : 0) | gain)]) {
+            if ambient { $0.ambientPreamp = preamp; $0.ambientGain = gain }
+            else { $0.micPreamp = preamp; $0.micGain = gain }
+        }
+    }
+    public func applyFactoryPreset(_ preset: FactoryEQPreset) {
+        guard available(.eq, .allGains) else { return }
+        change(.allGains, payload: ([preset.preamp] + preset.bands).map(Wire.gain)) {
+            $0.preamp = preset.preamp; $0.bands = preset.bands
+        }
+        presetName = preset.name
+    }
+    public func resetEqualizerToFlat() {
+        guard available(.eq, .allGains) else { return }
+        change(.allGains, payload: Array(repeating: 0, count: 11)) {
+            $0.preamp = 0
+            $0.bands = Array(repeating: 0, count: 10)
+        }
+        presetName = "Flat"
+    }
+    public func applyPreset(_ preset: EQPreset) {
+        guard available(.eq, .allGains), let preset = try? preset.validated() else { return }
+        change(.allGains, payload: ([preset.preamp] + preset.bands).map(Wire.gain)) { $0.preamp = preset.preamp; $0.bands = preset.bands }
+        if state.supportsQ { setQ(preset.q) }
+        if state.supportsHeadroom { setHeadroom(preset.headroom, compensation: preset.analogCompensation) }
+        presetName = preset.name
+    }
+    public func savePreset(name: String) {
+        let name = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(100))
+        guard !name.isEmpty, available(.eq) else { return }
+        let preset = EQPreset(name: name, preamp: state.preamp, bands: state.bands, q: state.q, headroom: state.headroom, analogCompensation: state.analogCompensation)
+        guard (try? preset.validated()) != nil else { message = "Refresh device settings before saving a preset."; return }
+        presets.append(preset); persistPresets(); presetName = name
+    }
+    public func deletePreset(_ id: UUID) { presets.removeAll { $0.id == id }; persistPresets() }
+    private func persistPresets() {
+        if let data = try? JSONEncoder().encode(PresetFile(presets: presets)) { defaults.set(data, forKey: "presets") }
+    }
+    public func importPresets(from data: Data, isAndroidXML: Bool = false) throws {
+        let imported = try PresetFile.decode(data)
+        presets += imported.map { var p = $0; p.id = UUID(); return p }
+        persistPresets()
+        message = "Imported \(imported.count) preset\(imported.count == 1 ? "" : "s"). Select a preset to apply it."
+        if isAndroidXML { message! += " Android imports use narrow Q and default headroom; those values are not stored in the Android preset slots." }
+    }
+    public func exportPresets() throws -> Data {
+        let current = EQPreset(name: presetName, preamp: state.preamp, bands: state.bands, q: state.q, headroom: state.headroom, analogCompensation: state.analogCompensation)
+        let content = presets.isEmpty && available(.eq) ? [current] : presets
+        guard !content.isEmpty else { throw PresetError.noPresets }
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return try encoder.encode(PresetFile(presets: content))
+    }
+    private func commandName(_ command: DeviceCommand) -> String { String(describing: command) }
+    private func log(_ text: String) {
+        logs.append(LogEntry(text: text)); if logs.count > 300 { logs.removeFirst(logs.count - 300) }
+    }
+}

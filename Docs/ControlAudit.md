@@ -1,4 +1,4 @@
-# Control mapping audit — Companion 1.0.6
+# Control mapping audit - Companion 1.0.6
 
 Audit date: 2026-10-07. The evidence is Android 1.9.0's `com_radsone_a_a_a_b.java` command writers and response switch, its paired disassembly, Android activities/fragments for control limits and gates, and the archived ES100 manual. [Provenance.md](Provenance.md) identifies the private evidence archive. This document records implementation checks; it does not claim every setting was exercised on physical hardware.
 
@@ -116,6 +116,6 @@ A device-specific recovery probe reproduced `closeConnection()` returning succes
 
 The candidate's recovery now waits up to five seconds for the observed disconnection, propagates a timeout if it never happens, and explicitly reopens the baseband connection before the model performs full SDP and opens RFCOMM. Tests exercise delayed state changes, timeout without reopening, and propagation of close/open failures. Physical authentication and complete readback remain separate hardware validation gates.
 
-The candidate is version **1.0.8 (9)**. Build versions are configured in `Configuration/App.xcconfig`; ordinary builds do not increment them. `Tools/build.sh` now prints the embedded version and the packaging command. `Tools/package.sh` builds a universal archive, creates a drag-install DMG under `dist`, verifies it, and generates a SHA-256 checksum. `Tools/publish-release.sh` runs both suites, packages, uploads and verifies a draft, then publishes it. No GitHub release was published during this investigation.
+The candidate is version **1.0.8 (9)**. Build versions are configured in `Apps/macOS/Configuration/App.xcconfig`; ordinary builds do not increment them. `Tools/build.sh` now prints the embedded version and the packaging command. `Tools/package.sh` builds a universal archive, creates a drag-install DMG under `dist`, verifies it, and generates a SHA-256 checksum. `Tools/publish-release.sh` runs both suites, packages, uploads and verifies a draft, then publishes it. No GitHub release was published during this investigation.
 
 Validation of this follow-up: **80 native tests passed with zero failures**; the universal Release app reports 1.0.8 (9); `Tools/package.sh` produced and verified `dist/EarStudio-Companion-1.0.8-macOS-universal.dmg` and its checksum. The installed copy was not replaced by the agent. The final candidate's hardware UI run is waiting for renewed Bluetooth permission: TCC logged a code-requirement mismatch and `AUTHREQ_PROMPTING` for the local build. The computer-use tool refuses access to the system permission-dialog application, so user action is needed before continuing that run.
