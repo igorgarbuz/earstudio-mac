@@ -48,9 +48,7 @@ jobs:
       - name: Show toolchain
         run: xcodebuild -version
       - name: Verify generated project is current
-        run: |
-          python3 Tools/generate_project.py
-          git diff --exit-code -- EarStudioCompanion.xcodeproj
+        run: ./Tools/regenerate-projects.sh --check
       - name: Run native XCTest suite
         run: ./Tools/build.sh test
       - name: Build universal Release app
@@ -66,9 +64,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Verify generated iPhone project
-        run: |
-          python3 Tools/generate_ios_project.py
-          git diff --exit-code -- EarStudioiOS.xcodeproj
+        run: ./Tools/regenerate-projects.sh --check
       - name: Build iPhone Simulator app
         run: ./Tools/build-ios.sh build
       - name: Run iPhone unit and layout tests

@@ -64,11 +64,12 @@ image_path="$project_root/dist/$image_name"
 checksum_path="$image_path.sha256"
 printf 'Repository: %s\nVersion: %s\nCommit: %s\nAssets: %s and its SHA-256 file\n' "$repository" "$tag" "$commit" "$image_name"
 if $dry_run; then
-    printf 'Dry run: would run both test suites, package, upload a draft, verify assets, then publish.\n'
+    printf 'Dry run: would run both test suites, package and notarize, upload a draft, verify assets, then publish.\n'
     exit 0
 fi
 [[ "$(gh repo view "$repository" --json isPrivate --jq '.isPrivate')" == false ]] \
     || fail 'The repository must be public before publishing this public release.'
+"$project_root/Tools/notarize.sh" --check-credentials
 printf 'Running core tests…\n'
 if ! swift test --package-path "$project_root/Packages/EarStudioKit" >"$project_root/build/logs/core-test.log" 2>&1; then
     tail -n 80 "$project_root/build/logs/core-test.log" >&2
@@ -76,6 +77,9 @@ if ! swift test --package-path "$project_root/Packages/EarStudioKit" >"$project_
 fi
 "$project_root/Tools/build.sh" test
 "$project_root/Tools/package.sh"
+# Never upload a public release without a valid stapled ticket and Gatekeeper acceptance.
+xcrun stapler validate "$image_path"
+spctl --assess --type open --context context:primary-signature --verbose=2 "$image_path"
 assert_clean
 [[ "$(git rev-parse HEAD)" == "$commit" ]] || fail 'HEAD changed while preparing the release.'
 assert_pushed

@@ -94,7 +94,10 @@ The product photo still comes from the single shared resource bundle.
 
 ## iPhone behavior
 
-- **Device:** discovery, authorization progress, volume/mute, signal and battery.
+- **Device:** discovery, authorization progress, volume/mute, and device details.
+  The connected device card shows battery percentage beside the connection status,
+  with a three-bar battery icon (orange at 33% or below). Battery moves below the
+  status when larger text needs more space; an unread level displays a dash.
   Bluetooth permission is requested only after choosing Connect or Change device.
   Connect reuses the last successful device (remembered across launches). First-use
   discovery waits three seconds after the first result before selecting a sole

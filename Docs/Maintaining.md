@@ -55,9 +55,57 @@ always use ad-hoc signing. The release publisher calls packaging without that
 override, so it cannot silently publish an ad-hoc build. The currently published
 releases retain their historical signing status until a new release is made.
 
-These scripts do **not** submit to Apple's notary service or staple a ticket.
-Developer ID signing and notarization are separate; a signed DMG is not a claim
-that Gatekeeper accepts a downloaded release without notarization. Version 1.0.11 introduces Developer ID signing for the public app and DMG.
+## Notarization
+
+Public packaging (`./Tools/package.sh`) requires notarization and an accessible
+Keychain profile. It validates credentials before building, signs the app and
+DMG, submits the DMG to Apple, requires `Accepted`, staples and validates the
+ticket, checks Gatekeeper acceptance, then generates the final SHA-256 checksum.
+`--ad-hoc` remains available for local/CI packaging without Apple credentials;
+it must never be used for public releases.
+
+One-time setup on the release Mac:
+
+```sh
+xcrun notarytool store-credentials "earstudio-notary" \
+  --apple-id "YOUR_APPLE_ACCOUNT_EMAIL" --team-id "YOUR_TEAM_ID"
+```
+
+Enter an app-specific password at the prompt. Generate it at
+[Apple Account](https://account.apple.com/) → Sign-In and Security → App-Specific
+Passwords. Find the Team ID in your Apple Developer account's Membership details.
+Individuals also have a Team ID. The password label is organizational, not an
+Apple-enforced restriction to this app. Keep a dedicated credential for this
+project; never put passwords in the repository or contributor CI.
+
+The default profile is `earstudio-notary`. Set `NOTARY_KEYCHAIN_PROFILE` to use
+another profile explicitly configured for this project. Validate it with:
+
+```sh
+./Tools/notarize.sh --check-credentials
+```
+
+To repair an existing signed release without rebuilding the app:
+
+```sh
+./Tools/notarize.sh dist/ES100-Control-1.0.13-macOS-universal.dmg
+```
+
+This changes the DMG by stapling its ticket and regenerates the adjacent `.sha256`
+file. It does not publish. Replace both assets on the existing GitHub release and
+update its notes only after success; no version increment is needed when the app
+is unchanged. If changing files inside the DMG (such as installation text), recreate
+and sign the DMG before notarizing. Never modify its contents afterward.
+
+Submission results and Apple's detailed logs are saved under
+`build/logs/notarization.*`. A rejection, network error, missing credential,
+stapling error, or Gatekeeper rejection stops the command and leaves no checksum.
+For a pending/interrupted submission, inspect its ID with `xcrun notarytool info`
+using the same Keychain profile before deciding whether to resubmit. Do not publish
+until acceptance and stapling succeed. Revoking the app-specific password or
+changing the main Apple Account password requires storing new credentials.
+
+Reference: [Apple's notarization workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow).
 
 For iPhone development signing and direct installation, use
 `Tools/install-ios.sh`; see [iPhone instructions](iOS.md#install-from-terminal).
@@ -67,12 +115,12 @@ References: [Apple code-signing certificates](https://developer.apple.com/docume
 
 ## Releases
 
-1. Prepare a PR updating `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `Apps/macOS/Configuration/App.xcconfig`, with release notes in `Docs/Releases/`.
-2. Review the PR, wait for both CI checks, resolve conversations, and squash merge it.
+1. Compare changes against the latest macOS release and select a patch (compatible fixes), minor (compatible new features), or major (breaking changes) version. Explain the choice in the PR or release notes. Update `MARKETING_VERSION` in `Apps/macOS/Configuration/App.xcconfig` and ensure the `CURRENT_PROJECT_VERSION` floor is at least the last distributed build number; the build scripts reserve the next number. Add release notes in `Docs/Releases/`. Keep iOS versioning independent. See [agent release checklist](../AGENTS.md#preparing-a-release).
+2. Review the PR, wait for all CI checks on its current commit, resolve conversations, and squash merge it under the repository review rules.
 3. In a clean local checkout, switch to `main` and run `git pull --ff-only`.
 4. Run `./Tools/publish-release.sh --dry-run`, inspect its target/version, then run `./Tools/publish-release.sh` when ready to publish.
 
-The publishing script requires a clean checkout matching the remote default branch, runs both test suites, packages a fresh universal DMG and checksum, and verifies draft uploads before publication. Publishing remains a deliberate maintainer operation using locally authenticated GitHub CLI credentials. Never put release credentials or device authentication keys into contributor CI.
+The publishing script requires a clean checkout matching the remote default branch, runs both test suites, packages and notarizes a fresh universal DMG, validates its stapled ticket and Gatekeeper acceptance, generates its final checksum, and verifies draft uploads before publication. Publishing remains a deliberate maintainer operation using locally authenticated GitHub CLI credentials. Never put release credentials or device authentication keys into contributor CI.
 
 See [SECURITY.md](../SECURITY.md) for vulnerability reporting and [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) for conduct expectations.
 

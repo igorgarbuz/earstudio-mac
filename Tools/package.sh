@@ -1,5 +1,5 @@
 #!/bin/bash
-# Create a Developer ID signed universal app and DMG; does not notarize or upload.
+# Create a signed, notarized universal DMG and checksum; does not upload to GitHub.
 set -euo pipefail
 
 ad_hoc=false
@@ -13,6 +13,7 @@ archive_args=(archive)
 if $ad_hoc; then
     archive_args+=(--ad-hoc)
 else
+    "$project_root/Tools/notarize.sh" --check-credentials
     signing_info=$(python3 "$project_root/Tools/apple_signing.py" mac)
     signing_identity=${signing_info%%$'\n'*}
     signing_team=${signing_info##*$'\n'}
@@ -56,19 +57,13 @@ Silicon and Intel code. It starts disconnected and does not change device
 settings until you connect and use its controls.
 Connect also handles Bluetooth recovery when necessary; audio may briefly pause.
 
-This community preview is not notarized by Apple.
-If macOS blocks the downloaded app, attempt to open it, then go to
-System Settings → Privacy & Security and choose Open Anyway.
-Only do this for the download you intentionally obtained from this project's
-GitHub Releases. Do not disable Gatekeeper globally.
-
 Hardware coverage is limited. Read the release notes for validation scope.
 The independent app code is MIT licensed; see LICENSE.txt.
 INSTALL
 if $ad_hoc; then
     printf '\nSignature: ad-hoc, for local development/CI only.\n' >>"$staging/Install.txt"
 else
-    printf '\nSignature: Developer ID Application. Notarization has not been performed.\n' >>"$staging/Install.txt"
+    printf '\nSignature: Developer ID Application. Public releases are notarized by Apple; open the app normally from Applications.\n' >>"$staging/Install.txt"
 fi
 
 image_name="ES100-Control-$version-macOS-universal.dmg"
@@ -84,6 +79,7 @@ hdiutil verify "$image_path" >>"$log_path" 2>&1
 if ! $ad_hoc; then
     codesign --force --sign "$signing_identity" --timestamp "$image_path"
     codesign --verify --strict "$image_path"
+    "$project_root/Tools/notarize.sh" "$image_path"
 fi
 (
     cd "$project_root/dist"

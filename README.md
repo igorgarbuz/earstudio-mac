@@ -10,7 +10,7 @@ An independent companion app for **EarStudio ES100 and ES100 MK2**, with native 
 
 Choose the **`.dmg` file** under **Assets**, open it, and drag **ES100 Control** into **Applications**. Requires macOS 14 or newer; works on Apple Silicon and Intel Macs. [Installation help](#download-and-install).
 
-> **First launch:** open the app normally from Applications. The app and DMG are **Developer ID signed**, but this release is **not notarized by Apple**. If macOS blocks opening it with an “Apple could not verify” warning, follow the [first-launch instructions](#first-launch-on-macos). Signing identifies the publisher and protects integrity; it does not replace notarization.
+> **First launch:** the current app and DMG are **Developer ID signed and notarized by Apple**. Open ES100 Control normally from Applications. The DMG includes a stapled notarization ticket for offline verification.
 
 A good DAC shouldn’t spend its retirement in a drawer. The discontinued **EarStudio ES100 and ES100 MK2** still have plenty to offer: 24-bit/48 kHz USB audio on a Mac, analog volume control and a balanced headphone output. But with the original iOS and Android apps gone from their stores, owners rediscovering their devices can lose access to the settings that make them so useful.[^app-availability] I built **ES100 Control** to give this hardware a second life. With no official open-source app to build on, I studied decompiled code from the Android APK to understand how it talks to the firmware, then wrote an independent native macOS app. See the [research provenance](Docs/Provenance.md) for the evidence behind the implementation.
 
@@ -30,16 +30,14 @@ This is an early community release, unaffiliated with Radsone. Physical testing 
 
 ### First launch on macOS
 
-Browser downloads receive macOS’s quarantine marker, which triggers Gatekeeper’s security checks. The current release is **Developer ID signed and not notarized by Apple**, so the downloaded app may show **“ES100 Control.app” Not Opened** and say Apple could not verify it is free of malware. A locally generated copy may open without this download warning.
+The current release is **Developer ID signed and notarized by Apple**. Open
+**ES100 Control** normally from **Applications**. macOS may show its standard
+confirmation that the app was downloaded from the internet.
 
-Open **ES100 Control** from **Applications** normally. If it opens, no Settings change is needed. **Only if macOS blocks opening it**, and you intentionally downloaded this copy from the project’s GitHub Releases:
-
-1. Dismiss the warning by clicking **Done**.
-2. Open the **Apple menu → System Settings → Privacy & Security**.
-3. Scroll down to the **Security** section and click **Open Anyway** beside the message about ES100 Control being blocked.
-4. Authenticate when prompted and confirm **Open**. You can then launch the app normally from Applications.
-
-This approves this app while keeping Gatekeeper enabled. See [Apple’s instructions for opening an app that hasn’t been notarized](https://support.apple.com/en-us/102445#openanyway).
+Older, unnotarized releases may require explicit approval in System Settings →
+Privacy & Security. Prefer downloading the current release. See
+[Apple's instructions](https://support.apple.com/en-us/102445#openanyway) for older
+copies you intentionally obtained from this project's GitHub Releases.
 
 Each release includes a SHA-256 checksum. Download it beside the DMG and run `shasum -a 256 -c` followed by the checksum filename to verify the download.
 
@@ -110,13 +108,13 @@ Choose the **EarStudioCompanion** scheme and **My Mac**, then press **⌘R** to 
 ./Tools/build.sh test     # Native XCTest suite
 swift test --package-path Packages/EarStudioKit  # Shared core/session tests
 ./Tools/check-ios-package.sh                    # Compile shared modules for iOS Simulator
-./Tools/package.sh        # Developer ID signed app/DMG and checksum
+./Tools/package.sh        # Signed, notarized app/DMG and checksum
 ./Tools/install-ios.sh    # Detect iPhone/team, build, sign and install locally
 ```
 
 `build.sh` defaults to `build` and does not create a DMG. Set `MARKETING_VERSION` deliberately in each app’s `Configuration/App.xcconfig`. iPhone installs and macOS release builds/archives automatically reserve the next build number and embed the Git revision plus a modified marker. Tests and compile-only iOS builds do not reserve numbers. See [build numbering](Docs/Maintaining.md#build-numbering).
 
-Generated apps, archives and logs go into the ignored build directory; DMGs and checksums go into the ignored dist directory. macOS Release builds and packaging require a valid **Developer ID Application** certificate and private key in the Keychain, with hardened runtime and a secure timestamp. The scripts detect a unique identity, or accept `APPLE_TEAM_ID` and `MACOS_SIGN_IDENTITY` to select one. Tests use ad-hoc signing; contributors and CI can explicitly run `./Tools/build.sh build --ad-hoc` or `./Tools/package.sh --ad-hoc`. The release publishing path requires Developer ID signing. Notarization remains a separate step; signing alone does not make the download notarized. See [signing setup](Docs/Maintaining.md#signing-local-builds).
+Generated apps, archives and logs go into the ignored build directory; DMGs and checksums go into the ignored dist directory. macOS Release builds and packaging require a valid **Developer ID Application** certificate and private key in the Keychain, with hardened runtime and a secure timestamp. The scripts detect a unique identity, or accept `APPLE_TEAM_ID` and `MACOS_SIGN_IDENTITY` to select one. Tests use ad-hoc signing; contributors and CI can explicitly run `./Tools/build.sh build --ad-hoc` or `./Tools/package.sh --ad-hoc`. Public packaging and publishing require Developer ID signing and Apple notarization using the `earstudio-notary` Keychain profile. Packaging staples and validates the ticket before generating the checksum; publishing checks it again. See [notarization setup](Docs/Maintaining.md#notarization). See [signing setup](Docs/Maintaining.md#signing-local-builds).
 
 The checked-in Xcode project is ready to open. The optional project generator is only needed after adding/removing files outside Xcode: run `python3 Tools/generate_project.py`. Build settings belong in the xcconfig files; regeneration replaces manual project/scheme edits.
 
