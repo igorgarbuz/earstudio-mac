@@ -14,6 +14,8 @@ public enum ConnectionPhase: String {
     case demo = "Demo mode"
 }
 
+public enum SettingsRefreshStatus { case idle, refreshing, updated, failed }
+
 public struct LogEntry: Identifiable {
     public let id = UUID()
     public let date = Date()
@@ -27,6 +29,7 @@ public final class DeviceSession: ObservableObject {
     @Published public private(set) var phase = ConnectionPhase.disconnected
     @Published public private(set) var deviceName = "EarStudio ES100"
     @Published public private(set) var address = ""
+    @Published public private(set) var refreshStatus = SettingsRefreshStatus.idle
     @Published public private(set) var pendingCount = 0
     @Published public private(set) var logs: [LogEntry] = []
     @Published public private(set) var presets: [EQPreset] = []
@@ -152,6 +155,7 @@ public final class DeviceSession: ObservableObject {
         generation = request; phase = .retrying; message = nil
     }
     public func disconnect(completion: @escaping () -> Void = {}) {
+        refreshStatus = refreshStatus == .refreshing ? .failed : .idle
         generation = UUID()
         timer?.invalidate(); authTimer?.invalidate(); syncTimer?.invalidate(); refreshTimer?.invalidate(); flushWork?.cancel(); readbackWork?.cancel()
         timer = nil; authTimer = nil; refreshTimer = nil
@@ -295,7 +299,11 @@ public final class DeviceSession: ObservableObject {
         }
     }
     public func refresh() {
-        guard isAuthenticated else { return }
+        guard isAuthenticated, refreshStatus != .refreshing else { return }
+        if phase == .connected {
+            refreshStatus = .refreshing
+            message = nil
+        }
         // Read firmware first; it determines the layouts of information and EQ.
         for command: DeviceCommand in [.deviceDetails, .deviceInfo, .state, .battery, .eq] { enqueue(command, start: false) }
         pump()
@@ -312,7 +320,10 @@ public final class DeviceSession: ObservableObject {
             for query in queries { enqueue(query, start: false) }
         }
         pendingCount = queue.pending.count + (queue.inFlight == nil ? 0 : 1)
-        guard let item = queue.next() else { return }
+        guard let item = queue.next() else {
+            if refreshStatus == .refreshing, pendingCount == 0 { refreshStatus = .updated }
+            return
+        }
         pendingCount = queue.pending.count + 1
         log(String(format: "→ %04X · %d bytes", item.command.rawValue, item.payload.count))
         let current = generation
@@ -344,6 +355,7 @@ public final class DeviceSession: ObservableObject {
         }
     }
     private func commandFailed(_ text: String) {
+        if refreshStatus == .refreshing { refreshStatus = .failed }
         if phase == .syncing { connectionFailed(text); return }
         timer?.invalidate(); timer = nil; flushWork?.cancel(); readbackWork?.cancel(); readbackWork = nil
         queue.reset(); effects.removeAll(); needsRefresh.removeAll(); pendingCount = 0
@@ -410,6 +422,14 @@ public final class DeviceSession: ObservableObject {
             $0.preamp = preset.preamp; $0.bands = preset.bands
         }
         presetName = preset.name
+    }
+    public func resetEqualizerToFlat() {
+        guard available(.eq, .allGains) else { return }
+        change(.allGains, payload: Array(repeating: 0, count: 11)) {
+            $0.preamp = 0
+            $0.bands = Array(repeating: 0, count: 10)
+        }
+        presetName = "Flat"
     }
     public func applyPreset(_ preset: EQPreset) {
         guard available(.eq, .allGains), let preset = try? preset.validated() else { return }

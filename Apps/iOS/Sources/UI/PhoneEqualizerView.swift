@@ -65,7 +65,7 @@ struct PhoneEqualizerView: View {
                 Text("Headroom makes space for boosted bands; analog compensation restores output level. Some options require newer firmware.")
             }
             Section {
-                Button("Reset to flat") { session.applyPreset(.flat) }
+                Button("Reset to flat") { session.resetEqualizerToFlat() }
                     .frame(minHeight: 44).disabled(!session.available(.eq, .allGains))
                     .accessibilityIdentifier("eq.reset")
             }
@@ -146,7 +146,10 @@ struct PhonePresetsView: View {
                         }.frame(minHeight: 44)
                     }
                     .disabled(!session.available(.eq, .allGains))
-                    .swipeActions { Button("Delete", role: .destructive) { session.deletePreset(preset.id) } }
+                    .swipeActions {
+                        Button("Delete", role: .destructive) { session.deletePreset(preset.id) }
+                            .tint(.red)
+                    }
                 }
             }
             Section {

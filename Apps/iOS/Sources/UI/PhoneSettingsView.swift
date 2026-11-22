@@ -221,14 +221,26 @@ private struct PhoneDiagnosticsView: View {
                 Text("Firmware flashing and factory reset are not included. Audio settings live on the device; your preset library is stored on this iPhone.")
                     .font(.callout).foregroundStyle(.secondary)
                 PhoneReadout(title: "Firmware", value: s.state.firmware ?? "—")
-                Button("Forget device confirmation", role: .destructive) { confirmingForget = true }
-                    .frame(minHeight: 44).disabled(s.address.isEmpty)
             }
             Section {
                 VStack(alignment: .leading, spacing: 4) {
-                    Button("Refresh device settings") { s.refresh() }
-                        .frame(minHeight: 44).disabled(s.phase != .connected)
+                    Button { s.refresh() } label: {
+                        HStack(spacing: 8) {
+                            if s.refreshStatus == .refreshing {
+                                ProgressView().controlSize(.small).accessibilityHidden(true)
+                            }
+                            Text(s.refreshStatus == .refreshing ? "Refreshing…" : "Refresh device settings")
+                        }
+                    }
+                        .frame(minHeight: 44).disabled(s.phase != .connected || s.refreshStatus == .refreshing)
                         .accessibilityIdentifier("diagnostics.refresh")
+                    if s.refreshStatus == .updated {
+                        Label("Settings updated", systemImage: "checkmark.circle")
+                            .font(.callout).foregroundStyle(.secondary)
+                    } else if s.refreshStatus == .failed {
+                        Text("Settings could not be refreshed. Check the connection and try again.")
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
                     Text("Read settings again from your EarStudio if the displayed values seem outdated.")
                         .font(.callout).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -254,10 +266,16 @@ private struct PhoneDiagnosticsView: View {
                 }
                 AboutFooter()
             }
+            Section {
+                Button("Forget device authorization", role: .destructive) { confirmingForget = true }
+                    .frame(minHeight: 44).disabled(s.address.isEmpty)
+            } header: { Text("Troubleshooting") } footer: {
+                Text("Use this if device authorization keeps failing. You will need to authorize the app again when connecting.")
+            }
         }
         .navigationTitle("Diagnostics & about").navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("Forget this device’s authorization?", isPresented: $confirmingForget, titleVisibility: .visible) {
-            Button("Forget confirmation", role: .destructive) { s.forgetKey() }
+            Button("Forget authorization", role: .destructive) { s.forgetKey() }
             Button("Cancel", role: .cancel) {}
         } message: { Text("You will need to authorize the app again on your next connection.") }
     }

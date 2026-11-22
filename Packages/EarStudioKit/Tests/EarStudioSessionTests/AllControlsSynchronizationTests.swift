@@ -170,6 +170,63 @@ final class AllControlsSynchronizationTests: XCTestCase {
         }
     }
 
+    func testFlatResetPreservesProcessingOptions() {
+        let link = AllControlsDevice(); let model = connectedModel(link)
+        defer { model.disconnect() }
+        let original = model.state
+        let done = expectation(description: "Flat gains confirmed")
+        link.onQuery = { _ in done.fulfill() }
+        model.resetEqualizerToFlat()
+        wait(for: [done], timeout: 2)
+        link.onQuery = nil
+        XCTAssertEqual(link.writes.map(\.id), [0x0144])
+        XCTAssertEqual(model.state.bands, Array(repeating: 0, count: 10))
+        XCTAssertEqual(model.state.preamp, 0)
+        XCTAssertEqual(model.state.q, original.q)
+        XCTAssertEqual(model.state.headroom, original.headroom)
+        XCTAssertEqual(model.state.analogCompensation, original.analogCompensation)
+        XCTAssertEqual(model.state.eqEnabled, original.eqEnabled)
+    }
+
+    func testManualRefreshReportsCompletionOnlyAfterAllReplies() {
+        let link = AllControlsDevice(); let model = connectedModel(link)
+        defer { model.disconnect() }
+        XCTAssertEqual(model.refreshStatus, .idle)
+        let done = expectation(description: "All refresh replies")
+        link.onQuery = { command in
+            if command == 0x0050 { done.fulfill() }
+            else { XCTAssertEqual(model.refreshStatus, .refreshing) }
+        }
+        model.refresh()
+        XCTAssertEqual(model.refreshStatus, .refreshing)
+        model.refresh() // Duplicate taps must not restart the batch.
+        wait(for: [done], timeout: 2)
+        link.onQuery = nil
+        XCTAssertEqual(model.refreshStatus, .updated)
+        XCTAssertEqual(link.queries, [0, 1, 16, 112, 80])
+    }
+
+    func testManualRefreshFailureDoesNotReportSuccess() {
+        let link = AllControlsDevice(); let model = connectedModel(link)
+        defer { model.disconnect() }
+        link.queryStatus = 2
+        let done = expectation(description: "Rejected refresh reply")
+        link.onQuery = { _ in done.fulfill() }
+        model.refresh()
+        wait(for: [done], timeout: 2)
+        link.onQuery = nil
+        XCTAssertEqual(model.refreshStatus, .failed)
+        XCTAssertNotNil(model.message)
+        XCTAssertEqual(model.pendingCount, 0)
+    }
+
+    func testDisconnectDuringRefreshDoesNotReportSuccess() {
+        let link = AllControlsDevice(); let model = connectedModel(link)
+        model.refresh()
+        model.disconnect()
+        XCTAssertEqual(model.refreshStatus, .failed)
+    }
+
     func testPresetGainsQAndHeadroomAreSerializedAndReadBack() {
         let link = AllControlsDevice(); let model = connectedModel(link)
         defer { model.disconnect() }

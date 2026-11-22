@@ -21,12 +21,17 @@ struct PhoneDeviceView: View {
                         .foregroundStyle(StudioTheme.green)
                     Text(session.deviceName).font(.title2.weight(.semibold))
                         .fixedSize(horizontal: false, vertical: true)
-                    Label(session.phase.rawValue, systemImage: session.canEdit ? "checkmark.circle" : "antenna.radiowaves.left.and.right")
-                        .font(.subheadline)
-                        .foregroundStyle(session.canEdit ? StudioTheme.green : .secondary)
-                    if session.isBusy {
-                        ProgressView().accessibilityLabel(session.phase.rawValue)
+                    HStack(spacing: 8) {
+                        if session.isBusy {
+                            ProgressView().controlSize(.small)
+                                .accessibilityHidden(true)
+                            Text(session.phase.rawValue)
+                        } else {
+                            Label(session.phase.rawValue, systemImage: session.canEdit ? "checkmark.circle" : "antenna.radiowaves.left.and.right")
+                        }
                     }
+                    .font(.subheadline)
+                    .foregroundStyle(session.canEdit ? StudioTheme.green : .secondary)
                     if session.phase == .confirmation {
                         Text("Briefly press the ES100 power button to authorize this app.")
                             .font(.callout).fixedSize(horizontal: false, vertical: true)

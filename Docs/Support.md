@@ -42,11 +42,11 @@ Check that equalization is enabled and that audio is actually playing through th
 
 ## Authorization or reconnect problems
 
-First try reconnecting with other controller apps closed. If authorization continues to fail, use **Forget device confirmation** in **Diagnostics & about**, then reconnect and authorize again when prompted.
+First try reconnecting with other controller apps closed. If authorization continues to fail, use **Forget device authorization** in the bottom **Troubleshooting** section of **Diagnostics & about**, then reconnect and authorize again when prompted.
 
 ## Diagnostics
 
-**Refresh device settings** is a troubleshooting action in the **Diagnostics** section of **Settings → Diagnostics & about**. Read settings again from your EarStudio if the displayed values seem outdated; normal use does not require a manual refresh.
+**Refresh device settings** is a troubleshooting action in the **Diagnostics** section of **Settings → Diagnostics & about**. Read settings again from your EarStudio if the displayed values seem outdated; normal use does not require a manual refresh. The button shows progress while reading and confirms when settings have been updated; a failed read is reported instead of showing success.
 
 To end the control connection, use **Disconnect** at the bottom of the **Device** page, below Signal & battery.
 
