@@ -25,6 +25,13 @@ final class IPhoneLayoutTests: XCTestCase {
         XCTAssertEqual(app.alerts.count, 0, "Launching must not show a device authorization prompt.")
         XCTAssertEqual(XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.count, 0,
                        "Launching must not request Bluetooth permission before the user chooses Find EarStudio.")
+        let status = app.staticTexts["Not connected"]
+        XCTAssertTrue(status.exists)
+        let card = app.collectionViews.cells.firstMatch
+        XCTAssertTrue(card.exists)
+        XCTAssertLessThan(card.frame.height, 360, "Disconnected card must stay content-sized.")
+        XCTAssertLessThan(status.frame.maxY, card.frame.maxY)
+        XCTAssertTrue(app.buttons["device.connect"].isHittable)
         capture("device-disconnected-portrait")
 
         tab("Equalizer")
@@ -44,6 +51,13 @@ final class IPhoneLayoutTests: XCTestCase {
         tab("Device")
         XCTAssertFalse(app.buttons["device.demo"].exists)
         XCTAssertTrue(app.buttons["device.connect"].exists)
+        let card = app.collectionViews.cells.firstMatch
+        XCTAssertLessThan(card.frame.height, 360, "Battery status must not stretch the device card.")
+        XCTAssertTrue(app.staticTexts["Demo mode"].exists)
+        let battery = app.descendants(matching: .any).matching(identifier: "device.battery").firstMatch
+        XCTAssertTrue(battery.exists)
+        XCTAssertEqual(battery.value as? String, "82 percent")
+        capture("device-demo-battery")
     }
 
     func testAllTenBandsAreReachableAndPresetCanBeSaved() {

@@ -5,6 +5,7 @@ import EarStudioUI
 
 struct PhoneDeviceView: View {
     @EnvironmentObject private var model: IOSStudioModel
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     private var session: DeviceSession { model.session }
 
     var body: some View {
@@ -20,17 +21,23 @@ struct PhoneDeviceView: View {
                         .foregroundStyle(StudioTheme.green)
                     Text(session.phase == .disconnected ? (model.rememberedDevice?.name ?? session.deviceName) : session.deviceName).font(.title2.weight(.semibold))
                         .fixedSize(horizontal: false, vertical: true)
-                    HStack(spacing: 8) {
-                        if session.isBusy || model.scanning {
-                            ProgressView().controlSize(.small)
-                                .accessibilityHidden(true)
-                            Text(model.scanning ? "Looking for EarStudio…" : session.phase.rawValue)
+                    if session.canEdit {
+                        if dynamicTypeSize >= .xxxLarge {
+                            VStack(alignment: .leading, spacing: 8) {
+                                connectionStatus
+                                batteryReadout
+                            }
                         } else {
-                            Label(session.phase.rawValue, systemImage: session.canEdit ? "checkmark.circle" : "antenna.radiowaves.left.and.right")
+                            HStack(spacing: 16) {
+                                connectionStatus
+                                Spacer(minLength: 8)
+                                batteryReadout
+                            }
+                            .fixedSize(horizontal: false, vertical: true)
                         }
+                    } else {
+                        connectionStatus
                     }
-                    .font(.subheadline)
-                    .foregroundStyle(session.canEdit ? StudioTheme.green : .secondary)
                     if session.phase == .confirmation {
                         Text("Briefly press the ES100 power button to authorize this app.")
                             .font(.callout).fixedSize(horizontal: false, vertical: true)
@@ -61,12 +68,11 @@ struct PhoneDeviceView: View {
                 Toggle("Mute", isOn: session.boolBinding(\.muted, .mute))
                     .disabled(!session.available(.audio, .mute))
             }
-            Section("Signal & battery") {
+            Section("Device details") {
                 PhoneReadout(title: "Input", value: session.canEdit ? session.state.inputName : "—")
                 PhoneReadout(title: "Codec", value: session.canEdit && session.state.input > 1 ? session.state.codecName : "—")
                 PhoneReadout(title: "Sample rate", value: session.canEdit ? session.state.rateName : "—")
                 PhoneReadout(title: "Output mode", value: session.canEdit ? session.state.outputName : "—")
-                PhoneReadout(title: "Battery", value: session.state.loaded.contains(.battery) ? "\(session.state.battery)%" : "—")
                 PhoneReadout(title: "Firmware", value: session.state.firmware ?? "—")
             }
             if !session.isBusy && !model.scanning && (model.rememberedDevice != nil || session.phase == .connected) {
@@ -86,6 +92,68 @@ struct PhoneDeviceView: View {
         .navigationTitle("ES100 Control")
         .sheet(isPresented: $model.showDevicePicker, onDismiss: { model.stopDiscovery() }) { PhoneConnectionSheet() }
         .accessibilityIdentifier("screen.device")
+    }
+
+    private var connectionStatus: some View {
+        HStack(spacing: 8) {
+            if session.isBusy || model.scanning {
+                ProgressView().controlSize(.small)
+                    .accessibilityHidden(true)
+                Text(model.scanning ? "Looking for EarStudio…" : session.phase.rawValue)
+            } else {
+                Image(systemName: session.canEdit ? "checkmark.circle" : "antenna.radiowaves.left.and.right")
+                    .accessibilityHidden(true)
+                Text(session.phase.rawValue)
+            }
+        }
+        .font(.subheadline)
+        .foregroundStyle(session.canEdit ? StudioTheme.green : .secondary)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    @ViewBuilder
+    private var batteryReadout: some View {
+        if session.canEdit {
+            PhoneBatteryReadout(level: session.state.loaded.contains(.battery) ? Int(session.state.battery) : nil)
+        }
+    }
+}
+
+private struct PhoneBatteryReadout: View {
+    let level: Int?
+
+    private var filledBars: Int {
+        guard let level, level > 0 else { return 0 }
+        return min(3, (level * 3 + 99) / 100)
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            HStack(spacing: 1) {
+                HStack(spacing: 2) {
+                    ForEach(0..<3) { bar in
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(.foreground)
+                            .opacity(bar < filledBars ? 1 : 0.18)
+                    }
+                }
+                .padding(3)
+                .frame(width: 27, height: 15)
+                .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(lineWidth: 1.5))
+                RoundedRectangle(cornerRadius: 1)
+                    .frame(width: 2, height: 6)
+            }
+            .accessibilityHidden(true)
+            Text(level.map { "\($0)%" } ?? "—")
+                .monospacedDigit()
+        }
+        .font(.subheadline.weight(.semibold))
+        .foregroundStyle(level == nil ? Color.secondary : ((level ?? 100) <= 33 ? Color.orange : StudioTheme.green))
+        .fixedSize()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Battery")
+        .accessibilityValue(level.map { "\($0) percent" } ?? "Updating")
+        .accessibilityIdentifier("device.battery")
     }
 }
 
