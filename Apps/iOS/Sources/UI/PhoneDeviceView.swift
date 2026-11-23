@@ -15,19 +15,22 @@ struct PhoneDeviceView: View {
                     DeviceImage()
                         .frame(height: 165)
                         .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.bottom, 12)
                         .accessibilityHidden(true)
-                    HStack(alignment: .firstTextBaseline, spacing: 12) {
-                        Text("ES100 / ES100 MK2")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(StudioTheme.green)
-                        Spacer(minLength: 0)
-                        // Reserve the battery's space while connecting so the card stays stable.
-                        PhoneBatteryReadout(level: session.state.loaded.contains(.battery) ? Int(session.state.battery) : nil)
-                            .opacity(session.canEdit ? 1 : 0)
-                            .accessibilityHidden(!session.canEdit)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(alignment: .firstTextBaseline, spacing: 12) {
+                            Text("ES100 / ES100 MK2")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(StudioTheme.green)
+                            Spacer(minLength: 0)
+                            // Reserve the battery's space while connecting so the card stays stable.
+                            PhoneBatteryReadout(level: session.state.loaded.contains(.battery) ? Int(session.state.battery) : nil)
+                                .opacity(session.canEdit ? 1 : 0)
+                                .accessibilityHidden(!session.canEdit)
+                        }
+                        Text(session.phase == .disconnected ? (model.rememberedDevice?.name ?? session.deviceName) : session.deviceName).font(.title2.weight(.semibold))
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    Text(session.phase == .disconnected ? (model.rememberedDevice?.name ?? session.deviceName) : session.deviceName).font(.title2.weight(.semibold))
-                        .fixedSize(horizontal: false, vertical: true)
                     if dynamicTypeSize >= .xxxLarge {
                         VStack(alignment: .leading, spacing: 8) {
                             connectionStatus
@@ -45,7 +48,7 @@ struct PhoneDeviceView: View {
                         Text("Briefly press the ES100 power button to authorize this app.")
                             .font(.callout).fixedSize(horizontal: false, vertical: true)
                     }
-                }.padding(.vertical, 8)
+                }.padding(.top, 8)
             } footer: {
                 Text("The companion controls settings. Choose your audio output separately in iPhone Control Center.")
             }
