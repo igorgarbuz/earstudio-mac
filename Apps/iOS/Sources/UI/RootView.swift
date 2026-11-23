@@ -63,7 +63,7 @@ struct PhoneSlider: View {
         value.formatted(.number.precision(.fractionLength(step < 0.1 ? 2 : (step < 1 ? 1 : 0)))) + (unit.isEmpty ? "" : " " + unit)
     }
     var body: some View {
-        VStack(alignment: .leading, spacing: compact ? 2 : 4) {
+        VStack(alignment: .leading, spacing: compact ? 6 : 4) {
             ViewThatFits(in: .horizontal) {
                 HStack {
                     Text(title).fixedSize()
