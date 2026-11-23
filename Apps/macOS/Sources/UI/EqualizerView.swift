@@ -18,13 +18,27 @@ struct EqualizerView: View {
                     Menu {
                         Section("Factory presets") {
                             ForEach(FactoryEQPreset.all) { preset in
-                                Button(preset.name) { model.applyFactoryPreset(preset) }.disabled(!model.available(.eq, .allGains))
+                                Button { model.applyFactoryPreset(preset) } label: {
+                                    HStack {
+                                        Text(preset.name)
+                                        if model.session.isSelected(preset) { Image(systemName: "checkmark") }
+                                    }
+                                }
+                                .accessibilityValue(model.session.isSelected(preset) ? "Matches current settings" : "")
+                                .disabled(!model.available(.eq, .allGains))
                             }
                         }
                         if !model.presets.isEmpty {
                             Section("Saved presets") {
                                 ForEach(model.presets) { preset in
-                                    Button(preset.name) { model.applyPreset(preset) }.disabled(!model.available(.eq, .allGains))
+                                    Button { model.applyPreset(preset) } label: {
+                                        HStack {
+                                            Text(preset.name)
+                                            if model.session.isSelected(preset) { Image(systemName: "checkmark") }
+                                        }
+                                    }
+                                    .accessibilityValue(model.session.isSelected(preset) ? "Matches current settings" : "")
+                                    .disabled(!model.available(.eq, .allGains))
                                 }
                             }
                         }

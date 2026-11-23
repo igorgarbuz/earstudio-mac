@@ -5,8 +5,8 @@ import EarStudioUI
 import EarStudioTestSupport
 
 final class AllControlsSynchronizationTests: XCTestCase {
-    private func connectedModel(_ link: AllControlsDevice) -> DeviceSession {
-        let model = makeSession()
+    private func connectedModel(_ link: AllControlsDevice, session: DeviceSession? = nil) -> DeviceSession {
+        let model = session ?? makeSession()
         model.connect(DeviceConnection(id: "test", name: "ES100", makeTransport: { link }))
         let ready = expectation(description: "Callbacks installed")
         DispatchQueue.main.async { ready.fulfill() }
@@ -27,7 +27,7 @@ final class AllControlsSynchronizationTests: XCTestCase {
         let link = AllControlsDevice()
         let model = connectedModel(link)
         model.savePreset(name: "Before background")
-        let selected = model.selectedPreset
+        let saved = model.presets.last!
         let original = model.state
         model.doubleBinding(\.volume, .volume, range: -60...6).wrappedValue = -20
         model.suspend()
@@ -35,7 +35,7 @@ final class AllControlsSynchronizationTests: XCTestCase {
         XCTAssertEqual(link.closeCount, 0)
         XCTAssertEqual(model.pendingCount, 0)
         XCTAssertEqual(model.state.volume, original.volume)
-        XCTAssertEqual(model.selectedPreset, selected)
+        XCTAssertEqual(model.presets.last, saved)
         model.refresh()
         // A queued flush and late reply must not send another command in background.
         link.onData?(GAIAPacket(command: 0x8110, payload: [0]).encoded())
@@ -80,7 +80,7 @@ final class AllControlsSynchronizationTests: XCTestCase {
         XCTAssertNil(model.message)
     }
 
-    func testPresetSelectionTracksIdentityAndClearsOnManualEdits() {
+    func testPresetMatchesTrackValuesIncludingDuplicatesAndManualEdits() {
         let model = makeSession()
         model.enterDemo()
         let factory = FactoryEQPreset.all[0]
@@ -90,19 +90,110 @@ final class AllControlsSynchronizationTests: XCTestCase {
         let first = model.presets.last!
         model.savePreset(name: factory.name)
         let second = model.presets.last!
-        XCTAssertFalse(model.isSelected(factory))
-        XCTAssertFalse(model.isSelected(first))
+        XCTAssertTrue(model.isSelected(factory))
+        XCTAssertTrue(model.isSelected(first))
         XCTAssertTrue(model.isSelected(second))
         model.applyPreset(first)
         XCTAssertTrue(model.isSelected(first))
-        XCTAssertFalse(model.isSelected(second))
+        XCTAssertTrue(model.isSelected(second))
         model.doubleBinding(\.preamp, .preamp, range: -12...12).wrappedValue = -3
         XCTAssertFalse(model.isSelected(first))
         model.applyFactoryPreset(factory)
         XCTAssertTrue(model.isSelected(factory))
         model.disconnect()
-        XCTAssertNil(model.selectedPreset)
         XCTAssertFalse(model.isSelected(factory))
+    }
+
+    func testMatchingPresetIsDetectedAfterAppRestartAndFreshReadback() {
+        let suite = "PresetRestart.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let original = connectedModel(AllControlsDevice(), session: makeSession(defaults: defaults))
+        original.savePreset(name: "M50x")
+        let saved = original.presets.last!
+        original.disconnect()
+        let restored = makeSession(defaults: defaults)
+        XCTAssertFalse(restored.isSelected(saved), "Do not infer device state before connecting.")
+        XCTAssertEqual(restored.presetName, "Device settings")
+        let link = AllControlsDevice()
+        _ = connectedModel(link, session: restored)
+        XCTAssertTrue(restored.isSelected(saved))
+        XCTAssertEqual(restored.presetName, "M50x")
+        // Another controller changes preamp; a refresh must stop claiming M50x.
+        link.replies[80]![2] = Wire.gain(-8)
+        let refreshed = expectation(description: "Changed EQ read back")
+        link.onQuery = { if $0 == 80 { refreshed.fulfill() } }
+        restored.refresh()
+        wait(for: [refreshed], timeout: 2)
+        XCTAssertFalse(restored.isSelected(saved))
+        XCTAssertEqual(restored.presetName, "Custom")
+    }
+
+    func testSavedMatchingUsesDevicePrecisionAndSupportedProcessingOptions() {
+        let model = connectedModel(AllControlsDevice())
+        let state = model.state
+        var preset = EQPreset(name: "Imported decimals", preamp: state.preamp + 0.01,
+                              bands: state.bands.map { $0 + 0.01 }, q: state.q,
+                              headroom: state.headroom, analogCompensation: state.analogCompensation)
+        XCTAssertTrue(model.isSelected(preset))
+        preset.preamp += 0.1
+        XCTAssertFalse(model.isSelected(preset))
+        preset.preamp = state.preamp
+        preset.q = state.q == 2896 ? 5791 : 2896
+        XCTAssertFalse(model.isSelected(preset))
+        preset.q = state.q
+        preset.headroom = state.headroom == 1 ? 2 : 1
+        XCTAssertFalse(model.isSelected(preset))
+        preset.headroom = state.headroom
+        preset.analogCompensation.toggle()
+        XCTAssertFalse(model.isSelected(preset))
+        preset.analogCompensation = state.analogCompensation
+        XCTAssertTrue(model.isSelected(preset))
+    }
+
+    func testMatchingIgnoresProcessingOptionsUnsupportedByOlderFirmware() {
+        let link = AllControlsDevice()
+        link.replies[0]!.replaceSubrange(6..<9, with: [1, 3, 0])
+        let model = connectedModel(link)
+        XCTAssertFalse(model.state.supportsQ)
+        XCTAssertFalse(model.state.supportsHeadroom)
+        let state = model.state
+        let preset = EQPreset(name: "Legacy", preamp: state.preamp, bands: state.bands,
+                              q: state.q == 2896 ? 5791 : 2896,
+                              headroom: state.headroom == 1 ? 2 : 1,
+                              analogCompensation: !state.analogCompensation)
+        XCTAssertTrue(model.isSelected(preset))
+    }
+
+    func testReadbackRestoresMatchingPresetWhenDeviceIgnoresAnEdit() {
+        let link = AllControlsDevice()
+        let model = connectedModel(link)
+        model.savePreset(name: "Actual device EQ")
+        let saved = model.presets.last!
+        link.applyWrites = false
+        let readBack = expectation(description: "Ignored edit readback")
+        link.onQuery = { if $0 == 80 { readBack.fulfill() } }
+        model.doubleBinding(\.preamp, .preamp, range: -12...12, gain: true).wrappedValue = -8
+        XCTAssertFalse(model.isSelected(saved))
+        wait(for: [readBack], timeout: 2)
+        XCTAssertTrue(model.isSelected(saved))
+        XCTAssertEqual(model.presetName, saved.name)
+    }
+
+    func testDuplicateMatchesDoNotInventAPresetIdentity() {
+        let model = makeSession(demo: true)
+        model.savePreset(name: "First")
+        model.savePreset(name: "Second")
+        XCTAssertTrue(model.presets.allSatisfy { model.isSelected($0) })
+        XCTAssertEqual(model.presetName, "Matching presets")
+        let first = model.presets[0]
+        let preamp = model.state.preamp
+        model.doubleBinding(\.preamp, .preamp, range: -12...12, gain: true).wrappedValue = preamp - 1
+        XCTAssertFalse(model.isSelected(first))
+        model.doubleBinding(\.preamp, .preamp, range: -12...12, gain: true).wrappedValue = preamp
+        XCTAssertTrue(model.isSelected(first))
+        model.deletePreset(model.presets[1].id)
+        XCTAssertEqual(model.presetName, "First")
     }
 
     func testEveryControlWithoutWriteACKConfirmsItsOwnFieldAndPreservesNeighbors() {

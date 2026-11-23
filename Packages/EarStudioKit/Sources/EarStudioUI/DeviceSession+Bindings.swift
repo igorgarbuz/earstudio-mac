@@ -9,7 +9,6 @@ public extension DeviceSession {
             var value = min(range.upperBound, max(range.lowerBound, value))
             if command == .volume, self.state.supportsHeadroom, self.state.loaded.contains(.info) { value = min(value, self.state.volumeLimit) }
             self.change(command, payload: gain ? [Wire.gain(value)] : Wire.volume(value)) { $0[keyPath: path] = value }
-            if command == .preamp { self.presetName = "Custom" }
         })
     }
     func boolBinding(_ path: WritableKeyPath<DeviceState, Bool>, _ command: DeviceCommand) -> Binding<Bool> {
@@ -28,7 +27,6 @@ public extension DeviceSession {
             guard value.isFinite else { return }
             let value = (min(12, max(-12, value)) * 10).rounded() / 10
             self.change(.band, payload: Wire.bandGain(at: index, gain: value), key: "band-\(index)") { $0.bands[index] = value }
-            self.presetName = "Custom"
         })
     }
 }

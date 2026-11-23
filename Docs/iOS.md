@@ -110,8 +110,11 @@ The product photo still comes from the single shared resource bundle.
 - **Equalizer:** ten vertically stacked bands, preamp, EQ curve, processing options,
   reset, factory presets and saved presets. Import uses Files with security-scoped
   access; export uses a native document exporter. Presets retain the Mac JSON format.
-  A green checkmark and highlight track the selected preset, including when names
-  are duplicated. Manual EQ edits clear the selection.
+  A green checkmark and highlight identify presets matching the current device EQ,
+  including after reconnecting or restarting. Matching compares band gains and
+  preamp at device precision, plus supported processing options for saved presets.
+  Identical presets can all match. Edits remove a match when their values differ;
+  returning to the same values restores it. Factory presets match only gains and preamp.
 - **Settings:** output/DAC, input/codecs, ambient/calls, power/device settings and
   diagnostics. Controls remain disabled until their required state and firmware
   support are known. Enabling an ES100 codec does not add that codec to iPhone.

@@ -48,7 +48,7 @@ final class StudioModel: ObservableObject {
     var logs: [LogEntry] { session.logs }
     var presets: [EQPreset] { session.presets }
     var message: String? { get { session.message } set { session.message = newValue } }
-    var presetName: String { get { session.presetName } set { session.presetName = newValue } }
+    var presetName: String { session.presetName }
     var isDemo: Bool { session.isDemo }
     var hasSelectedDevice: Bool { session.hasSelectedDevice }
     var canEdit: Bool { session.canEdit }
