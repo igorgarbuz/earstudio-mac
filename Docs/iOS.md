@@ -86,7 +86,7 @@ Outputs and logs are under ignored `build/iOS`, `build/iOS-device` and `build/lo
 retain screenshots from the UI suite. In Debug builds only, `--demo` opens sample
 device state without Bluetooth; Release builds ignore it. `--screenshot-tab=device|equalizer|settings` selects the initial tab.
 `--ui-testing` isolates preset storage and bypasses the device authorization store.
-Normal launch is disconnected and does not request Bluetooth permission.
+First launch stays disconnected and does not request Bluetooth permission. Once a device has connected successfully, launch and return from the background automatically try that remembered device once. Manual Disconnect or Cancel suppresses automatic connection until the user connects again or relaunches the app. Failed attempts leave Connect available; they do not scan for a different device.
 
 `Tools/generate_icon.swift --ios` generates the opaque iPhone icon from the same
 vector artwork as the Mac icon. Each platform retains its own icon catalog.
@@ -98,7 +98,7 @@ The product photo still comes from the single shared resource bundle.
   The connected device card shows battery percentage beside the connection status,
   with a three-bar battery icon (orange at 33% or below). Battery moves below the
   status when larger text needs more space; an unread level displays a dash.
-  Bluetooth permission is requested only after choosing Connect or Change device.
+  First-use Bluetooth permission is requested after choosing Connect or Change device.
   Connect reuses the last successful device (remembered across launches). First-use
   discovery waits three seconds after the first result before selecting a sole
   device; multiple results open the picker. Change device always requires selection.
@@ -107,11 +107,13 @@ The product photo still comes from the single shared resource bundle.
 - **Equalizer:** ten vertically stacked bands, preamp, EQ curve, processing options,
   reset, factory presets and saved presets. Import uses Files with security-scoped
   access; export uses a native document exporter. Presets retain the Mac JSON format.
+  A green checkmark and highlight track the selected preset, including when names
+  are duplicated. Manual EQ edits clear the selection.
 - **Settings:** output/DAC, input/codecs, ambient/calls, power/device settings and
   diagnostics. Controls remain disabled until their required state and firmware
   support are known. Enabling an ES100 codec does not add that codec to iPhone.
 - **Background:** disconnect and stop scanning. There is no background Bluetooth
-  mode, audio playback engine, automatic write retry, or automatic reconnect.
+  mode, audio playback engine, or automatic write retry. Returning to the foreground reconnects to the remembered device and reads fresh settings; pending writes are never replayed.
 - **Storage:** local preset defaults and device-only, unlocked-only Keychain tokens.
   No accounts, cloud synchronization, analytics, or network API credentials.
 

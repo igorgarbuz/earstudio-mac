@@ -42,8 +42,52 @@ final class ConnectionSelectionTests: XCTestCase {
 
     func testOpeningAppDoesNotScanOrConnect() throws {
         try makeModel()
+        model.becameActive()
         settle()
         XCTAssertEqual(scans, 0)
+        XCTAssertTrue(attempted.isEmpty)
+    }
+
+    func testForegroundReconnectsOnceAndRetriesAfterBackground() throws {
+        let previous = IOSDevice(id: UUID(), name: "EarStudio", signal: nil)
+        try makeModel(remembering: previous)
+        model.becameActive()
+        settle()
+        model.becameActive()
+        settle()
+        XCTAssertEqual(attempted, [previous.id])
+        model.enteredBackground()
+        model.becameActive()
+        settle()
+        XCTAssertEqual(attempted, [previous.id, previous.id])
+        XCTAssertEqual(scans, 0)
+    }
+
+    func testExplicitDisconnectAndCancelSuppressForegroundReconnect() throws {
+        let previous = IOSDevice(id: UUID(), name: "EarStudio", signal: nil)
+        try makeModel(remembering: previous)
+        model.disconnect()
+        model.enteredBackground()
+        model.becameActive()
+        settle()
+        XCTAssertTrue(attempted.isEmpty)
+        model.requestConnection()
+        settle()
+        XCTAssertEqual(attempted, [previous.id])
+        model.cancelConnection()
+        model.enteredBackground()
+        model.becameActive()
+        settle()
+        XCTAssertEqual(attempted, [previous.id])
+    }
+
+    func testDemoDoesNotAutoConnect() throws {
+        let previous = IOSDevice(id: UUID(), name: "EarStudio", signal: nil)
+        try makeModel(remembering: previous)
+        model.session.enterDemo()
+        model.becameActive()
+        model.enteredBackground()
+        XCTAssertTrue(model.session.isDemo)
         XCTAssertTrue(attempted.isEmpty)
     }
 

@@ -24,6 +24,8 @@ final class IOSStudioModel: NSObject, ObservableObject, CBCentralManagerDelegate
     private let makeTransport: (UUID) -> SessionTransport
     private var connectingDevice: IOSDevice?
     private var automaticSelection = false
+    private var foregroundHandled = false
+    private var autoConnectSuppressed = false
     private var selectionWindow: Timer?
     private let rememberedDeviceKey = "lastConnectedEarStudio"
     static let compatibilityNotice = "Turn on your EarStudio and keep it nearby. Close other controller apps before connecting."
@@ -73,6 +75,22 @@ final class IOSStudioModel: NSObject, ObservableObject, CBCentralManagerDelegate
         }.store(in: &subscriptions)
     }
 
+    func becameActive() {
+        guard !foregroundHandled else { return }
+        foregroundHandled = true
+        guard !session.isDemo, !autoConnectSuppressed, !showDevicePicker,
+              rememberedDevice != nil else { return }
+        requestConnection()
+    }
+
+    func enteredBackground() {
+        foregroundHandled = false
+        stopDiscovery()
+        // Cancel pending writes before suspension; reconnect with fresh readback.
+        if !session.isDemo { session.disconnect() }
+        connectionMessage = nil
+    }
+
     func requestConnection() {
         guard !session.isBusy, session.phase != .connected, !scanning else { return }
         if let rememberedDevice { connect(rememberedDevice) }
@@ -86,6 +104,7 @@ final class IOSStudioModel: NSObject, ObservableObject, CBCentralManagerDelegate
     }
 
     func cancelConnection() {
+        autoConnectSuppressed = true
         stopDiscovery()
         if session.isBusy { session.cancelConfirmation() }
         connectionMessage = nil
@@ -143,6 +162,7 @@ final class IOSStudioModel: NSObject, ObservableObject, CBCentralManagerDelegate
         stopDiscovery()
         showDevicePicker = false
         connectionMessage = nil
+        autoConnectSuppressed = false
         connectingDevice = device
         let makeTransport = self.makeTransport
         session.connect(DeviceConnection(id: device.id.uuidString, name: device.name,
@@ -150,6 +170,7 @@ final class IOSStudioModel: NSObject, ObservableObject, CBCentralManagerDelegate
     }
 
     func disconnect() {
+        autoConnectSuppressed = true
         stopDiscovery()
         session.disconnect()
         connectionMessage = nil

@@ -34,7 +34,14 @@ public final class DeviceSession: ObservableObject {
     @Published public private(set) var logs: [LogEntry] = []
     @Published public private(set) var presets: [EQPreset] = []
     @Published public var message: String?
-    @Published public var presetName = "Custom"
+    public enum PresetSelection: Equatable {
+        case saved(UUID)
+        case factory(Int)
+    }
+    @Published public private(set) var selectedPreset: PresetSelection?
+    @Published public var presetName = "Custom" {
+        didSet { selectedPreset = nil }
+    }
     private var transport: SessionTransport?
     private var closingTransport: SessionTransport?
     private let saveDeviceKey: (UInt16, String) -> Bool
@@ -162,6 +169,7 @@ public final class DeviceSession: ObservableObject {
         let previous = transport ?? closingTransport
         transport = nil; closingTransport = previous
         queue.reset(); effects.removeAll(); needsRefresh.removeAll(); unsupported.removeAll(); decoder.reset()
+        selectedPreset = nil
         pendingCount = 0; isAuthenticated = false; phase = .disconnected
         confirmed = DeviceState(); state = confirmed
         if let previous {
@@ -422,6 +430,7 @@ public final class DeviceSession: ObservableObject {
             $0.preamp = preset.preamp; $0.bands = preset.bands
         }
         presetName = preset.name
+        selectedPreset = .factory(preset.id)
     }
     public func resetEqualizerToFlat() {
         guard available(.eq, .allGains) else { return }
@@ -430,6 +439,7 @@ public final class DeviceSession: ObservableObject {
             $0.bands = Array(repeating: 0, count: 10)
         }
         presetName = "Flat"
+        selectedPreset = FactoryEQPreset.all.first(where: { $0.name == "Flat" }).map { .factory($0.id) }
     }
     public func applyPreset(_ preset: EQPreset) {
         guard available(.eq, .allGains), let preset = try? preset.validated() else { return }
@@ -437,6 +447,7 @@ public final class DeviceSession: ObservableObject {
         if state.supportsQ { setQ(preset.q) }
         if state.supportsHeadroom { setHeadroom(preset.headroom, compensation: preset.analogCompensation) }
         presetName = preset.name
+        selectedPreset = .saved(preset.id)
     }
     public func savePreset(name: String) {
         let name = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(100))
@@ -444,8 +455,25 @@ public final class DeviceSession: ObservableObject {
         let preset = EQPreset(name: name, preamp: state.preamp, bands: state.bands, q: state.q, headroom: state.headroom, analogCompensation: state.analogCompensation)
         guard (try? preset.validated()) != nil else { message = "Refresh device settings before saving a preset."; return }
         presets.append(preset); persistPresets(); presetName = name
+        selectedPreset = .saved(preset.id)
     }
-    public func deletePreset(_ id: UUID) { presets.removeAll { $0.id == id }; persistPresets() }
+    public func deletePreset(_ id: UUID) {
+        if selectedPreset == .saved(id) { selectedPreset = nil }
+        presets.removeAll { $0.id == id }; persistPresets()
+    }
+
+    public func isSelected(_ preset: FactoryEQPreset) -> Bool {
+        canEdit && selectedPreset == .factory(preset.id) &&
+            state.preamp == preset.preamp && state.bands == preset.bands
+    }
+
+    public func isSelected(_ preset: EQPreset) -> Bool {
+        canEdit && selectedPreset == .saved(preset.id) &&
+            state.preamp == preset.preamp && state.bands == preset.bands &&
+            (!state.supportsQ || state.q == preset.q) &&
+            (!state.supportsHeadroom || (state.headroom == preset.headroom &&
+                state.analogCompensation == preset.analogCompensation))
+    }
     private func persistPresets() {
         if let data = try? JSONEncoder().encode(PresetFile(presets: presets)) { defaults.set(data, forKey: "presets") }
     }

@@ -17,6 +17,21 @@ final class IPhoneLayoutTests: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
     }
 
+    func testPresetSelectionMovesBetweenRows() {
+        launch(demo: true, tab: "equalizer")
+        app.buttons["eq.presets"].tap()
+        let acoustic = app.buttons["presets.factory.0"]
+        let bass = app.buttons["presets.factory.1"]
+        reveal(acoustic)
+        acoustic.tap()
+        XCTAssertEqual(acoustic.value as? String, "Selected")
+        reveal(bass)
+        bass.tap()
+        XCTAssertEqual(bass.value as? String, "Selected")
+        XCTAssertNotEqual(acoustic.value as? String, "Selected")
+        capture("preset-selection")
+    }
+
     func testDisconnectedControlsRequireConnection() {
         launch()
         XCTAssertFalse(app.buttons["device.demo"].exists)

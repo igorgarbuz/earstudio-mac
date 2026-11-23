@@ -23,6 +23,31 @@ final class AllControlsSynchronizationTests: XCTestCase {
         return model
     }
 
+    func testPresetSelectionTracksIdentityAndClearsOnManualEdits() {
+        let model = makeSession()
+        model.enterDemo()
+        let factory = FactoryEQPreset.all[0]
+        model.applyFactoryPreset(factory)
+        XCTAssertTrue(model.isSelected(factory))
+        model.savePreset(name: factory.name)
+        let first = model.presets.last!
+        model.savePreset(name: factory.name)
+        let second = model.presets.last!
+        XCTAssertFalse(model.isSelected(factory))
+        XCTAssertFalse(model.isSelected(first))
+        XCTAssertTrue(model.isSelected(second))
+        model.applyPreset(first)
+        XCTAssertTrue(model.isSelected(first))
+        XCTAssertFalse(model.isSelected(second))
+        model.doubleBinding(\.preamp, .preamp, range: -12...12).wrappedValue = -3
+        XCTAssertFalse(model.isSelected(first))
+        model.applyFactoryPreset(factory)
+        XCTAssertTrue(model.isSelected(factory))
+        model.disconnect()
+        XCTAssertNil(model.selectedPreset)
+        XCTAssertFalse(model.isSelected(factory))
+    }
+
     func testEveryControlWithoutWriteACKConfirmsItsOwnFieldAndPreservesNeighbors() {
         // Use the same native bindings/actions as the SwiftUI controls. Literal
         // payloads and the fake's independent bit edits catch UI/wire mismatches.
