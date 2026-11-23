@@ -15,51 +15,42 @@ struct PhoneDeviceView: View {
                     DeviceImage()
                         .frame(height: 165)
                         .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.bottom, 12)
                         .accessibilityHidden(true)
-                    Text("ES100 / ES100 MK2")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(StudioTheme.green)
-                    Text(session.phase == .disconnected ? (model.rememberedDevice?.name ?? session.deviceName) : session.deviceName).font(.title2.weight(.semibold))
-                        .fixedSize(horizontal: false, vertical: true)
-                    if session.canEdit {
-                        if dynamicTypeSize >= .xxxLarge {
-                            VStack(alignment: .leading, spacing: 8) {
-                                connectionStatus
-                                batteryReadout
-                            }
-                        } else {
-                            HStack(spacing: 16) {
-                                connectionStatus
-                                Spacer(minLength: 8)
-                                batteryReadout
-                            }
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(alignment: .firstTextBaseline, spacing: 12) {
+                            Text("ES100 / ES100 MK2")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(StudioTheme.green)
+                            Spacer(minLength: 0)
+                            // Reserve the battery's space while connecting so the card stays stable.
+                            PhoneBatteryReadout(level: session.state.loaded.contains(.battery) ? Int(session.state.battery) : nil)
+                                .opacity(session.canEdit ? 1 : 0)
+                                .accessibilityHidden(!session.canEdit)
+                        }
+                        Text(session.phase == .disconnected ? (model.rememberedDevice?.name ?? session.deviceName) : session.deviceName).font(.title2.weight(.semibold))
                             .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if dynamicTypeSize >= .xxxLarge {
+                        VStack(alignment: .leading, spacing: 8) {
+                            connectionStatus
+                            connectionAction
                         }
                     } else {
-                        connectionStatus
+                        HStack(spacing: 12) {
+                            connectionStatus
+                            Spacer(minLength: 8)
+                            connectionAction
+                        }
+                        .frame(minHeight: 44)
                     }
                     if session.phase == .confirmation {
                         Text("Briefly press the ES100 power button to authorize this app.")
                             .font(.callout).fixedSize(horizontal: false, vertical: true)
                     }
-                }.padding(.vertical, 8)
+                }.padding(.top, 8)
             } footer: {
                 Text("The companion controls settings. Choose your audio output separately in iPhone Control Center.")
-            }
-            if session.phase != .connected {
-                Section {
-                    if session.isBusy || model.scanning {
-                        Button("Cancel connection", role: .cancel) { model.cancelConnection() }
-                            .frame(minHeight: 44)
-                    } else {
-                        Button {
-                            model.requestConnection()
-                        } label: {
-                            Label("Connect", systemImage: "antenna.radiowaves.left.and.right")
-                                .frame(minHeight: 44)
-                        }.accessibilityIdentifier("device.connect")
-                    }
-                }
             }
             SessionMessageSection()
             Section("Analog volume") {
@@ -74,12 +65,6 @@ struct PhoneDeviceView: View {
                 PhoneReadout(title: "Sample rate", value: session.canEdit ? session.state.rateName : "—")
                 PhoneReadout(title: "Output mode", value: session.canEdit ? session.state.outputName : "—")
                 PhoneReadout(title: "Firmware", value: session.state.firmware ?? "—")
-            }
-            if !session.isBusy && !model.scanning && (model.rememberedDevice != nil || session.phase == .connected) {
-                Section {
-                    Button("Change device") { model.changeDevice() }
-                        .frame(minHeight: 44).accessibilityIdentifier("device.change")
-                }
             }
             if session.phase == .connected {
                 Section {
@@ -112,10 +97,31 @@ struct PhoneDeviceView: View {
     }
 
     @ViewBuilder
-    private var batteryReadout: some View {
-        if session.canEdit {
-            PhoneBatteryReadout(level: session.state.loaded.contains(.battery) ? Int(session.state.battery) : nil)
+    private var connectionAction: some View {
+        Group {
+            if session.isBusy || model.scanning {
+                Button("Cancel", role: .cancel) { model.cancelConnection() }
+                    .accessibilityLabel("Cancel connection")
+                    .accessibilityIdentifier("device.cancel")
+            } else {
+                HStack(spacing: 16) {
+                    if session.phase != .connected {
+                        Button("Connect") { model.requestConnection() }
+                            .frame(minHeight: 44)
+                            .accessibilityIdentifier("device.connect")
+                    }
+                    if model.rememberedDevice != nil || session.phase == .connected {
+                        Button("Change device") { model.changeDevice() }
+                            .frame(minHeight: 44)
+                            .accessibilityIdentifier("device.change")
+                    }
+                }
+            }
         }
+        .font(.subheadline)
+        .buttonStyle(.borderless)
+        .frame(minHeight: 44)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -230,7 +236,14 @@ private struct PhoneConnectionSheet: View {
             }
             .navigationTitle("Connect")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        model.cancelConnection()
+                        dismiss()
+                    }
+                }
+            }
         }
         .onDisappear { model.stopDiscovery() }
     }

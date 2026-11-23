@@ -17,12 +17,11 @@ struct EarStudioIOSApp: App {
                 .environmentObject(model)
                 .tint(StudioTheme.green)
                 .preferredColorScheme(.dark)
-                .onChange(of: scenePhase) { _, phase in
-                    // There is no background control mode. End active work before
-                    // suspension so writes are never replayed after returning.
-                    if phase == .background {
-                        model.stopDiscovery()
-                        if !model.session.isDemo { model.disconnect() }
+                .onChange(of: scenePhase, initial: true) { _, phase in
+                    switch phase {
+                    case .active: model.becameActive()
+                    case .background: model.enteredBackground()
+                    default: break
                     }
                 }
         }

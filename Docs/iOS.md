@@ -13,8 +13,8 @@ local development build; physical ES100/MK2 compatibility is not yet verified.
    demo mode, no startup writes, serialized commands, and readback confirmation.
 4. Implement Core Bluetooth discovery and the documented GAIA BLE profile, translating
    its ATT values into the packet format consumed by the shared session.
-5. Store device authorization in this iPhone's Keychain; disconnect on backgrounding
-   so queued work does not resume unexpectedly after suspension.
+5. Store device authorization in this iPhone's Keychain; keep established connections
+   on backgrounding, cancel queued work, and refresh settings on return.
 6. Verify wire conversion, app builds, and iPhone UI at compact widths, landscape,
    and accessibility text sizes. Physical-device validation remains a separate gate.
 
@@ -86,7 +86,7 @@ Outputs and logs are under ignored `build/iOS`, `build/iOS-device` and `build/lo
 retain screenshots from the UI suite. In Debug builds only, `--demo` opens sample
 device state without Bluetooth; Release builds ignore it. `--screenshot-tab=device|equalizer|settings` selects the initial tab.
 `--ui-testing` isolates preset storage and bypasses the device authorization store.
-Normal launch is disconnected and does not request Bluetooth permission.
+First launch stays disconnected and does not request Bluetooth permission. Once a device has connected successfully, launch automatically tries that remembered device once. Returning from the background reuses an established connection and refreshes settings, reconnecting only if the link was lost. Manual Disconnect or Cancel (including Cancel in the device picker) suppresses automatic connection until the user connects again or relaunches the app. Failed attempts leave Connect available; they do not scan for a different device.
 
 `Tools/generate_icon.swift --ios` generates the opaque iPhone icon from the same
 vector artwork as the Mac icon. Each platform retains its own icon catalog.
@@ -95,10 +95,13 @@ The product photo still comes from the single shared resource bundle.
 ## iPhone behavior
 
 - **Device:** discovery, authorization progress, volume/mute, and device details.
-  The connected device card shows battery percentage beside the connection status,
-  with a three-bar battery icon (orange at 33% or below). Battery moves below the
-  status when larger text needs more space; an unread level displays a dash.
-  Bluetooth permission is requested only after choosing Connect or Change device.
+  The connected device card shows battery percentage beside the product label,
+  with a three-bar battery icon (orange at 33% or below); an unread level displays a dash.
+  Connect, Cancel, and Change device live inside the card, beside the status at
+  normal text sizes and below it at larger sizes. Connecting no longer inserts a
+  separate Cancel row above the volume controls. Change device opens the existing
+  scrollable picker; multiple discovered devices require an explicit choice.
+  First-use Bluetooth permission is requested after choosing Connect or Change device.
   Connect reuses the last successful device (remembered across launches). First-use
   discovery waits three seconds after the first result before selecting a sole
   device; multiple results open the picker. Change device always requires selection.
@@ -107,11 +110,22 @@ The product photo still comes from the single shared resource bundle.
 - **Equalizer:** ten vertically stacked bands, preamp, EQ curve, processing options,
   reset, factory presets and saved presets. Import uses Files with security-scoped
   access; export uses a native document exporter. Presets retain the Mac JSON format.
+  A green checkmark and highlight identify presets matching the current device EQ,
+  including after reconnecting or restarting. Matching compares band gains and
+  preamp at device precision, plus supported processing options for saved presets.
+  Identical presets can all match. Edits remove a match when their values differ;
+  returning to the same values restores it. Factory presets match only gains and preamp.
 - **Settings:** output/DAC, input/codecs, ambient/calls, power/device settings and
   diagnostics. Controls remain disabled until their required state and firmware
   support are known. Enabling an ES100 codec does not add that codec to iPhone.
-- **Background:** disconnect and stop scanning. There is no background Bluetooth
-  mode, audio playback engine, automatic write retry, or automatic reconnect.
+- **Background:** keep the established Bluetooth control connection, stop scanning
+  and polling, and discard queued commands. An unfinished connection/authentication
+  attempt is cancelled. Returning to the foreground refreshes settings over the
+  existing link; if it has dropped, try the remembered device once. A delayed
+  disconnect notification also gets this bounded fallback. There is no background
+  Bluetooth mode or guarantee that iOS will retain the link, and no automatic write
+  retry. A change already sent may reach ES100; unsent edits are discarded. Foreground
+  readback reconciles the controls with the actual device settings.
 - **Storage:** local preset defaults and device-only, unlocked-only Keychain tokens.
   No accounts, cloud synchronization, analytics, or network API credentials.
 

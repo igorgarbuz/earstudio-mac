@@ -44,7 +44,10 @@ struct PhoneEqualizerView: View {
                 ForEach(0..<10) { index in
                     PhoneSlider(title: bandTitle(index), value: session.bandBinding(index),
                                 range: -12...12, step: 0.1, identifier: "eq.band.\(index)", compact: true)
-                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                        // The 44-point slider touch area already includes space below
+                        // its thumb. Balance the visible labels/thumb around each divider.
+                        .listRowInsets(EdgeInsets(top: index == 0 ? 20 : 12, leading: 16,
+                                                  bottom: index == 9 ? 14 : 6, trailing: 16))
                 }
             }
             .disabled(!session.available(.eq, .band))
@@ -114,6 +117,13 @@ struct PhonePresetsView: View {
     @State private var exportDocument = PresetDocument(data: Data())
     private var session: DeviceSession { model.session }
 
+    private func selectionMarker(_ selected: Bool) -> some View {
+        Image(systemName: "checkmark.circle.fill")
+            .foregroundStyle(StudioTheme.green)
+            .opacity(selected ? 1 : 0)
+            .accessibilityHidden(true)
+    }
+
     var body: some View {
         List {
             SessionMessageSection()
@@ -140,11 +150,19 @@ struct PhonePresetsView: View {
                 if session.presets.isEmpty { Text("No saved presets yet.").foregroundStyle(.secondary) }
                 ForEach(session.presets) { preset in
                     Button { session.applyPreset(preset) } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(preset.name).foregroundStyle(.primary)
-                            Text("Preamp \(preset.preamp.formatted()) dB").font(.caption).foregroundStyle(.secondary)
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(preset.name).foregroundStyle(.primary)
+                                Text("Preamp \(preset.preamp.formatted()) dB").font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            selectionMarker(session.isSelected(preset))
                         }.frame(minHeight: 44)
                     }
+                    .listRowBackground(session.isSelected(preset) ? StudioTheme.green.opacity(0.15) : Color.clear)
+                    .accessibilityValue(session.isSelected(preset) ? "Selected" : "")
+                    .accessibilityAddTraits(session.isSelected(preset) ? .isSelected : [])
+                    .accessibilityIdentifier("presets.saved.\(preset.id)")
                     .disabled(!session.available(.eq, .allGains))
                     .swipeActions {
                         Button("Delete", role: .destructive) { session.deletePreset(preset.id) }
@@ -154,8 +172,17 @@ struct PhonePresetsView: View {
             }
             Section {
                 ForEach(FactoryEQPreset.all) { preset in
-                    Button(preset.name) { session.applyFactoryPreset(preset) }
-                        .frame(minHeight: 44)
+                    Button { session.applyFactoryPreset(preset) } label: {
+                        HStack {
+                            Text(preset.name)
+                            Spacer()
+                            selectionMarker(session.isSelected(preset))
+                        }.frame(minHeight: 44)
+                    }
+                        .listRowBackground(session.isSelected(preset) ? StudioTheme.green.opacity(0.15) : Color.clear)
+                        .accessibilityValue(session.isSelected(preset) ? "Selected" : "")
+                        .accessibilityAddTraits(session.isSelected(preset) ? .isSelected : [])
+                        .accessibilityIdentifier("presets.factory.\(preset.id)")
                         .disabled(!session.available(.eq, .allGains))
                 }
             } header: { Text("Factory presets") } footer: {
