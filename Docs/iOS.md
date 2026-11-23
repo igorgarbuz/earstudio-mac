@@ -95,9 +95,12 @@ The product photo still comes from the single shared resource bundle.
 ## iPhone behavior
 
 - **Device:** discovery, authorization progress, volume/mute, and device details.
-  The connected device card shows battery percentage beside the connection status,
-  with a three-bar battery icon (orange at 33% or below). Battery moves below the
-  status when larger text needs more space; an unread level displays a dash.
+  The connected device card shows battery percentage beside the product label,
+  with a three-bar battery icon (orange at 33% or below); an unread level displays a dash.
+  Connect, Cancel, and Change device live inside the card, beside the status at
+  normal text sizes and below it at larger sizes. Connecting no longer inserts a
+  separate Cancel row above the volume controls. Change device opens the existing
+  scrollable picker; multiple discovered devices require an explicit choice.
   First-use Bluetooth permission is requested after choosing Connect or Change device.
   Connect reuses the last successful device (remembered across launches). First-use
   discovery waits three seconds after the first result before selecting a sole

@@ -46,7 +46,11 @@ final class IPhoneLayoutTests: XCTestCase {
         XCTAssertTrue(card.exists)
         XCTAssertLessThan(card.frame.height, 360, "Disconnected card must stay content-sized.")
         XCTAssertLessThan(status.frame.maxY, card.frame.maxY)
-        XCTAssertTrue(app.buttons["device.connect"].isHittable)
+        let connect = app.buttons["device.connect"]
+        XCTAssertTrue(connect.isHittable)
+        XCTAssertGreaterThanOrEqual(connect.frame.minY, card.frame.minY)
+        XCTAssertLessThanOrEqual(connect.frame.maxY, card.frame.maxY,
+                                 "Connection actions belong inside the device card.")
         capture("device-disconnected-portrait")
 
         tab("Equalizer")
@@ -160,6 +164,11 @@ final class IPhoneLayoutTests: XCTestCase {
         reveal(crossfeed)
         assertControlFits(crossfeed)
         capture("sound-accessibility-text")
+        tab("Device")
+        let connect = app.buttons["device.connect"]
+        reveal(connect, direction: .down)
+        assertControlFits(connect)
+        capture("device-accessibility-text")
     }
 
     private func launch(demo: Bool = false, tab: String = "device", accessibilityText: Bool = false) {
