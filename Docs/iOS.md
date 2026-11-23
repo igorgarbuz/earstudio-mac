@@ -86,7 +86,7 @@ Outputs and logs are under ignored `build/iOS`, `build/iOS-device` and `build/lo
 retain screenshots from the UI suite. In Debug builds only, `--demo` opens sample
 device state without Bluetooth; Release builds ignore it. `--screenshot-tab=device|equalizer|settings` selects the initial tab.
 `--ui-testing` isolates preset storage and bypasses the device authorization store.
-First launch stays disconnected and does not request Bluetooth permission. Once a device has connected successfully, launch automatically tries that remembered device once. Returning from the background reuses an established connection and refreshes settings, reconnecting only if the link was lost. Manual Disconnect or Cancel suppresses automatic connection until the user connects again or relaunches the app. Failed attempts leave Connect available; they do not scan for a different device.
+First launch stays disconnected and does not request Bluetooth permission. Once a device has connected successfully, launch automatically tries that remembered device once. Returning from the background reuses an established connection and refreshes settings, reconnecting only if the link was lost. Manual Disconnect or Cancel (including Cancel in the device picker) suppresses automatic connection until the user connects again or relaunches the app. Failed attempts leave Connect available; they do not scan for a different device.
 
 `Tools/generate_icon.swift --ios` generates the opaque iPhone icon from the same
 vector artwork as the Mac icon. Each platform retains its own icon catalog.

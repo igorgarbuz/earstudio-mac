@@ -82,6 +82,39 @@ final class ConnectionSelectionTests: XCTestCase {
         XCTAssertEqual(attempted, [previous.id])
     }
 
+    func testPickerCancellationSuppressesReconnectUntilExplicitSelection() throws {
+        let previous = IOSDevice(id: UUID(), name: "EarStudio", signal: nil)
+        try makeModel(remembering: previous)
+        model.becameActive()
+        settle()
+        XCTAssertEqual(attempted, [previous.id])
+        XCTAssertEqual(model.session.phase, .disconnected)
+
+        model.changeDevice()
+        XCTAssertTrue(model.showDevicePicker)
+        // The picker Cancel action cancels before dismissing the sheet.
+        model.cancelConnection()
+        model.showDevicePicker = false
+        model.stopDiscovery()
+        model.enteredBackground()
+        model.becameActive()
+        settle()
+        XCTAssertEqual(attempted, [previous.id])
+        XCTAssertFalse(model.scanning)
+
+        // Selecting a device dismisses the same sheet without cancelling.
+        model.changeDevice()
+        model.connect(previous)
+        model.stopDiscovery()
+        settle()
+        XCTAssertFalse(model.showDevicePicker)
+        XCTAssertEqual(attempted, [previous.id, previous.id])
+        model.enteredBackground()
+        model.becameActive()
+        settle()
+        XCTAssertEqual(attempted, [previous.id, previous.id, previous.id])
+    }
+
     func testBackgroundKeepsEstablishedConnectionAndForegroundRefreshesIt() throws {
         let device = IOSDevice(id: UUID(), name: "EarStudio", signal: nil)
         let link = ConnectedDevice()

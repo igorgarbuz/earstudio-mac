@@ -236,7 +236,14 @@ private struct PhoneConnectionSheet: View {
             }
             .navigationTitle("Connect")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        model.cancelConnection()
+                        dismiss()
+                    }
+                }
+            }
         }
         .onDisappear { model.stopDiscovery() }
     }
