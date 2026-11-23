@@ -44,7 +44,7 @@ struct PhoneEqualizerView: View {
                 ForEach(0..<10) { index in
                     PhoneSlider(title: bandTitle(index), value: session.bandBinding(index),
                                 range: -12...12, step: 0.1, identifier: "eq.band.\(index)", compact: true)
-                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                        .listRowInsets(EdgeInsets(top: index == 0 ? 16 : 6, leading: 16, bottom: 6, trailing: 16))
                 }
             }
             .disabled(!session.available(.eq, .band))
