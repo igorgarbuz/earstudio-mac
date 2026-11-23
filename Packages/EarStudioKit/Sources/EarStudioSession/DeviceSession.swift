@@ -62,6 +62,7 @@ public final class DeviceSession: ObservableObject {
     private var unsupported: Set<DeviceCommand> = []
     private var generation = UUID()
     private var isAuthenticated = false
+    @Published private var isSuspended = false
     private let defaults: UserDefaults
 
     public init(demo: Bool = false, defaults: UserDefaults,
@@ -77,7 +78,7 @@ public final class DeviceSession: ObservableObject {
     }
     public var isDemo: Bool { phase == .demo }
     public var hasSelectedDevice: Bool { selectedDevice != nil }
-    public var canEdit: Bool { phase == .connected || isDemo }
+    public var canEdit: Bool { !isSuspended && (phase == .connected || isDemo) }
     public var isBusy: Bool { [.connecting, .retrying, .recovering, .authenticating, .confirmation, .syncing].contains(phase) }
     private var isOpening: Bool { phase == .connecting || phase == .retrying }
     public func available(_ group: StateGroup, _ command: DeviceCommand? = nil) -> Bool {
@@ -164,11 +165,13 @@ public final class DeviceSession: ObservableObject {
     public func disconnect(completion: @escaping () -> Void = {}) {
         refreshStatus = refreshStatus == .refreshing ? .failed : .idle
         generation = UUID()
-        timer?.invalidate(); authTimer?.invalidate(); syncTimer?.invalidate(); refreshTimer?.invalidate(); flushWork?.cancel(); readbackWork?.cancel()
-        timer = nil; authTimer = nil; refreshTimer = nil
+        cancelPendingCommands()
+        authTimer?.invalidate(); syncTimer?.invalidate(); refreshTimer?.invalidate()
+        authTimer = nil; syncTimer = nil; refreshTimer = nil
+        isSuspended = false
         let previous = transport ?? closingTransport
         transport = nil; closingTransport = previous
-        queue.reset(); effects.removeAll(); needsRefresh.removeAll(); unsupported.removeAll(); decoder.reset()
+        unsupported.removeAll(); decoder.reset()
         selectedPreset = nil
         pendingCount = 0; isAuthenticated = false; phase = .disconnected
         confirmed = DeviceState(); state = confirmed
@@ -180,6 +183,44 @@ public final class DeviceSession: ObservableObject {
         }
         else { completion() }
     }
+    /// Preserve an established control channel, but never resume queued settings writes.
+    public func suspend() {
+        guard !isDemo else { return }
+        guard phase == .connected else {
+            // An unfinished handshake is not an established connection.
+            if isBusy { disconnect() }
+            return
+        }
+        isSuspended = true
+        cancelPendingCommands()
+        refreshTimer?.invalidate(); refreshTimer = nil
+        refreshStatus = .idle
+        rebuildState()
+    }
+
+    public func resume() {
+        guard isSuspended else { return }
+        isSuspended = false
+        guard phase == .connected else { return }
+        startPolling()
+        refresh()
+    }
+
+    private func startPolling() {
+        refreshTimer?.invalidate()
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            guard let self, !self.isSuspended, self.phase == .connected, self.pendingCount == 0 else { return }
+            self.enqueue(.battery)
+        }
+    }
+
+    private func cancelPendingCommands() {
+        timer?.invalidate(); timer = nil
+        flushWork?.cancel(); flushWork = nil
+        readbackWork?.cancel(); readbackWork = nil
+        queue.reset(); effects.removeAll(); needsRefresh.removeAll(); pendingCount = 0
+    }
+
     /// One recovery inside a user-initiated Connect attempt. This closes the
     /// baseband link, briefly interrupting audio, before one final control open.
     /// It never retries a setting write or removes pairing/confirmation keys.
@@ -236,6 +277,8 @@ public final class DeviceSession: ObservableObject {
     private func receive(_ data: Data) {
         for packet in decoder.append(data) {
             guard packet.vendor == GAIAPacket.earStudioVendor, packet.isAcknowledgement, let status = packet.status else { continue }
+            // Drain late packets without letting suspended work advance the queue.
+            guard !isSuspended else { continue }
             // Never include a device authentication key in diagnostic output.
             log(String(format: "← %04X · status %d · %d bytes", packet.id, status, packet.payload.count))
             if packet.id == 0x0302, status == 0 {
@@ -298,16 +341,13 @@ public final class DeviceSession: ObservableObject {
             if isAuthenticated, phase == .syncing, confirmed.firmware != nil, confirmed.loaded.isSuperset(of: [.audio, .eq, .info]) {
                 phase = .connected
                 syncTimer?.invalidate(); syncTimer = nil
-                refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-                    guard let self, self.phase == .connected, self.pendingCount == 0 else { return }
-                    self.enqueue(.battery)
-                }
+                startPolling()
             }
             pump()
         }
     }
     public func refresh() {
-        guard isAuthenticated, refreshStatus != .refreshing else { return }
+        guard isAuthenticated, !isSuspended, refreshStatus != .refreshing else { return }
         if phase == .connected {
             refreshStatus = .refreshing
             message = nil
@@ -322,7 +362,7 @@ public final class DeviceSession: ObservableObject {
         if start { pump() }
     }
     private func pump() {
-        guard isAuthenticated else { return }
+        guard isAuthenticated, !isSuspended else { return }
         if queue.inFlight == nil, queue.pending.isEmpty, !needsRefresh.isEmpty {
             let queries = needsRefresh.sorted { $0.rawValue < $1.rawValue }; needsRefresh.removeAll()
             for query in queries { enqueue(query, start: false) }
@@ -365,8 +405,7 @@ public final class DeviceSession: ObservableObject {
     private func commandFailed(_ text: String) {
         if refreshStatus == .refreshing { refreshStatus = .failed }
         if phase == .syncing { connectionFailed(text); return }
-        timer?.invalidate(); timer = nil; flushWork?.cancel(); readbackWork?.cancel(); readbackWork = nil
-        queue.reset(); effects.removeAll(); needsRefresh.removeAll(); pendingCount = 0
+        cancelPendingCommands()
         rebuildState(); message = text; log(text)
         // No automatic retries: a volume or power change may have reached the device.
     }

@@ -23,6 +23,63 @@ final class AllControlsSynchronizationTests: XCTestCase {
         return model
     }
 
+    func testSuspendKeepsConnectionDiscardsUnsentEditsAndRefreshesOnResume() {
+        let link = AllControlsDevice()
+        let model = connectedModel(link)
+        model.savePreset(name: "Before background")
+        let selected = model.selectedPreset
+        let original = model.state
+        model.doubleBinding(\.volume, .volume, range: -60...6).wrappedValue = -20
+        model.suspend()
+        XCTAssertEqual(model.phase, .connected)
+        XCTAssertEqual(link.closeCount, 0)
+        XCTAssertEqual(model.pendingCount, 0)
+        XCTAssertEqual(model.state.volume, original.volume)
+        XCTAssertEqual(model.selectedPreset, selected)
+        model.refresh()
+        // A queued flush and late reply must not send another command in background.
+        link.onData?(GAIAPacket(command: 0x8110, payload: [0]).encoded())
+        let quiet = expectation(description: "Cancelled flush")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { quiet.fulfill() }
+        wait(for: [quiet], timeout: 1)
+        XCTAssertTrue(link.writes.isEmpty)
+        XCTAssertTrue(link.queries.isEmpty)
+        link.replies[16]!.replaceSubrange(7..<9, with: Wire.volume(-25))
+        let refreshed = expectation(description: "Foreground refresh")
+        link.onQuery = { if $0 == 80 { refreshed.fulfill() } }
+        model.resume()
+        wait(for: [refreshed], timeout: 2)
+        XCTAssertEqual(model.state.volume, -25)
+        XCTAssertEqual(model.refreshStatus, .updated)
+        XCTAssertEqual(model.phase, .connected)
+        XCTAssertEqual(link.closeCount, 0)
+        XCTAssertTrue(link.writes.isEmpty)
+        XCTAssertEqual(link.queries, [0, 1, 16, 112, 80])
+    }
+
+    func testSuspendDoesNotReplayAnAlreadySentWrite() {
+        let link = AllControlsDevice()
+        let model = connectedModel(link)
+        let sent = expectation(description: "Setting reached transport")
+        link.onWrite = { _ in sent.fulfill() }
+        model.doubleBinding(\.volume, .volume, range: -60...6).wrappedValue = -20
+        wait(for: [sent], timeout: 1)
+        link.onWrite = nil
+        // Queue another edit while the first is waiting for readback.
+        model.doubleBinding(\.volume, .volume, range: -60...6).wrappedValue = -30
+        model.suspend()
+        let refreshed = expectation(description: "Read actual device setting")
+        link.onQuery = { if $0 == 80 { refreshed.fulfill() } }
+        model.resume()
+        link.onData?(GAIAPacket(command: 0x8110, payload: [0]).encoded())
+        wait(for: [refreshed], timeout: 2)
+        XCTAssertEqual(link.writes.count, 1)
+        XCTAssertEqual(model.state.volume, -20)
+        XCTAssertEqual(model.pendingCount, 0)
+        XCTAssertEqual(link.closeCount, 0)
+        XCTAssertNil(model.message)
+    }
+
     func testPresetSelectionTracksIdentityAndClearsOnManualEdits() {
         let model = makeSession()
         model.enterDemo()
@@ -311,6 +368,8 @@ private final class AllControlsDevice: SessionTransport {
     var onError: ((TransportFailure) -> Void)?
     var onDiagnostic: ((String) -> Void)?
     var onQuery: ((UInt16) -> Void)?
+    var onWrite: ((GAIAPacket) -> Void)?
+    var closeCount = 0
     var sendWriteACK = false
     var applyWrites = true
     var queryStatus: UInt8 = 0
@@ -320,7 +379,7 @@ private final class AllControlsDevice: SessionTransport {
     var replies: [UInt16: [UInt8]] = [0: ControlFixtures.details, 1: ControlFixtures.info, 16: ControlFixtures.audio, 80: ControlFixtures.eq, 112: [0, 82, 15, 180]]
     init() { replies[16]![6] = 1 } // unlocked, single-ended normal power
     func open() {}
-    func close(completion: @escaping () -> Void) { completion() }
+    func close(completion: @escaping () -> Void) { closeCount += 1; completion() }
     func send(_ data: Data) -> Bool {
         var decoder = GAIAStreamDecoder()
         guard let packet = decoder.append(data).first else { return false }
@@ -380,6 +439,7 @@ private final class AllControlsDevice: SessionTransport {
             default: return false
             }
         }
+        onWrite?(packet)
         if sendWriteACK {
             DispatchQueue.main.async { [weak self] in self?.onData?(GAIAPacket(command: packet.id | 0x8000, payload: [0]).encoded()) }
         }

@@ -275,7 +275,7 @@ private struct PhoneDiagnosticsView: View {
         }
         .navigationTitle("Diagnostics & about").navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("Forget this device’s authorization?", isPresented: $confirmingForget, titleVisibility: .visible) {
-            Button("Forget authorization", role: .destructive) { s.forgetKey() }
+            Button("Forget authorization", role: .destructive) { model.forgetAuthorization() }
             Button("Cancel", role: .cancel) {}
         } message: { Text("You will need to authorize the app again on your next connection.") }
     }

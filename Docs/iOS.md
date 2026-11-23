@@ -13,8 +13,8 @@ local development build; physical ES100/MK2 compatibility is not yet verified.
    demo mode, no startup writes, serialized commands, and readback confirmation.
 4. Implement Core Bluetooth discovery and the documented GAIA BLE profile, translating
    its ATT values into the packet format consumed by the shared session.
-5. Store device authorization in this iPhone's Keychain; disconnect on backgrounding
-   so queued work does not resume unexpectedly after suspension.
+5. Store device authorization in this iPhone's Keychain; keep established connections
+   on backgrounding, cancel queued work, and refresh settings on return.
 6. Verify wire conversion, app builds, and iPhone UI at compact widths, landscape,
    and accessibility text sizes. Physical-device validation remains a separate gate.
 
@@ -86,7 +86,7 @@ Outputs and logs are under ignored `build/iOS`, `build/iOS-device` and `build/lo
 retain screenshots from the UI suite. In Debug builds only, `--demo` opens sample
 device state without Bluetooth; Release builds ignore it. `--screenshot-tab=device|equalizer|settings` selects the initial tab.
 `--ui-testing` isolates preset storage and bypasses the device authorization store.
-First launch stays disconnected and does not request Bluetooth permission. Once a device has connected successfully, launch and return from the background automatically try that remembered device once. Manual Disconnect or Cancel suppresses automatic connection until the user connects again or relaunches the app. Failed attempts leave Connect available; they do not scan for a different device.
+First launch stays disconnected and does not request Bluetooth permission. Once a device has connected successfully, launch automatically tries that remembered device once. Returning from the background reuses an established connection and refreshes settings, reconnecting only if the link was lost. Manual Disconnect or Cancel suppresses automatic connection until the user connects again or relaunches the app. Failed attempts leave Connect available; they do not scan for a different device.
 
 `Tools/generate_icon.swift --ios` generates the opaque iPhone icon from the same
 vector artwork as the Mac icon. Each platform retains its own icon catalog.
@@ -112,8 +112,14 @@ The product photo still comes from the single shared resource bundle.
 - **Settings:** output/DAC, input/codecs, ambient/calls, power/device settings and
   diagnostics. Controls remain disabled until their required state and firmware
   support are known. Enabling an ES100 codec does not add that codec to iPhone.
-- **Background:** disconnect and stop scanning. There is no background Bluetooth
-  mode, audio playback engine, or automatic write retry. Returning to the foreground reconnects to the remembered device and reads fresh settings; pending writes are never replayed.
+- **Background:** keep the established Bluetooth control connection, stop scanning
+  and polling, and discard queued commands. An unfinished connection/authentication
+  attempt is cancelled. Returning to the foreground refreshes settings over the
+  existing link; if it has dropped, try the remembered device once. A delayed
+  disconnect notification also gets this bounded fallback. There is no background
+  Bluetooth mode or guarantee that iOS will retain the link, and no automatic write
+  retry. A change already sent may reach ES100; unsent edits are discarded. Foreground
+  readback reconciles the controls with the actual device settings.
 - **Storage:** local preset defaults and device-only, unlocked-only Keychain tokens.
   No accounts, cloud synchronization, analytics, or network API credentials.
 
