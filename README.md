@@ -174,6 +174,8 @@ The original Radsone PDFs are preserved here for owners who want to explore the 
 
 The six technical PDFs are Radsone application notes and reports, rather than chip datasheets. Standalone AKM AK4375A and Qualcomm CSR8675 datasheets are not included in the available collection. Firmware-update instructions in the manual refer to the original tools; this companion does not flash firmware.
 
+> **Firmware updates:** See the [community discussion about ES100 firmware 2.0.2](https://www.reddit.com/r/DHExchange/comments/rvdq34/firmware_upgrade_202_for_earstudioradsone_es100/) for archived files and update information. This is a third-party resource; ES100 Control does not install firmware.
+
 ## License
 
 The independently authored code, tests, documentation and app icon are [MIT licensed](https://github.com/igorgarbuz/earstudio-mac/blob/main/LICENSE). The Radsone PDFs in `Docs/Reference` are third-party materials and are not covered by that license. The product photo shared by the README and both apps was taken and supplied by the project owner. Vendor Android binaries and decompiled material are not distributed in this repository or its app. EarStudio and other product names belong to their respective owners.
