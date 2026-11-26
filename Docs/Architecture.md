@@ -1,7 +1,7 @@
 # Repository architecture
 
 ES100 Control is one repository with independently integrated platform apps.
-The macOS app is the only shipping app; the iPhone app is a local development target. Shared code is built as local Swift package
+The macOS app ships through [GitHub Releases](https://github.com/igorgarbuz/earstudio-mac/releases/latest); the iPhone app ships through the [App Store](https://apps.apple.com/fr/app/es100-control/id6837818492). Shared code is built as local Swift package
 modules; it is not compiled a second time as app source. No remote package or
 third-party library is required. The Mac app and its hosted tests link the single
 `EarStudioKit` product, which contains all four shipping modules. Individual layer

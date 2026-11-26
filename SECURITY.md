@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Security fixes target the latest stable release on [GitHub Releases](https://github.com/igorgarbuz/earstudio-mac/releases/latest). Older releases are not maintained separately. Device firmware and third-party manufacturer materials are outside this project's control.
+Security fixes target the latest stable app versions distributed through the [App Store](https://apps.apple.com/fr/app/es100-control/id6837818492) for iPhone and [GitHub Releases](https://github.com/igorgarbuz/earstudio-mac/releases/latest) for macOS. Older releases are not maintained separately. Device firmware and third-party manufacturer materials are outside this project's control.
 
 ## Reporting a vulnerability
 
@@ -10,7 +10,7 @@ Use **Security → Report a vulnerability**, or [start a private vulnerability r
 
 Include:
 
-- The affected app version or source commit and macOS version.
+- The affected app version or source commit and iOS/macOS version.
 - The vulnerable behavior and its potential impact.
 - Reproduction steps or a minimal proof of concept.
 - Any relevant device/firmware details and possible mitigation.

@@ -1,8 +1,11 @@
 # iPhone companion implementation
 
 The iPhone app is an independent target using the same shared protocol, session,
-EQ, preset, and resource modules as macOS. It requires iOS 17 or later. This is a
-local development build; physical ES100/MK2 compatibility is not yet verified.
+EQ, preset, and resource modules as macOS. It requires iOS 17 or later and is
+available on the [App Store](https://apps.apple.com/fr/app/es100-control/id6837818492).
+The maintainer has confirmed successful operation on a physical iPhone with
+EarStudio hardware; compatibility with every ES100/MK2 firmware version is not established.
+For installation and troubleshooting, see [iPhone support](Support.md).
 
 ## Implementation plan and boundaries
 

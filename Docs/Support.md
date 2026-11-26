@@ -2,6 +2,9 @@
 
 ES100 Control is an independent iPhone companion for EarStudio ES100 and ES100 MK2 hardware. It lets you adjust device audio settings and manage equalizer presets. Compatible physical hardware is required.
 
+[Download ES100 Control on the App Store](https://apps.apple.com/fr/app/es100-control/id6837818492). Requires iOS 17 or later.
+For the Mac app, see [macOS download and installation](../README.md#macos).
+
 ## Contact
 
 For help, bug reports, or privacy questions, email **[ig@rbuz.me](mailto:ig@rbuz.me)**.
