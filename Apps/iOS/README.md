@@ -1,5 +1,9 @@
 # ES100 Control for iPhone
 
+[Download ES100 Control on the App Store](https://apps.apple.com/fr/app/es100-control/id6837818492). Requires iOS 17 or newer.
+
+## Build from source
+
 Open the repository-root `EarStudioiOS.xcodeproj`, choose **EarStudioiOS**, and run
 on an iPhone simulator. Requires iOS 17+. For UI development without Bluetooth,
 add `--demo` to the scheme’s launch arguments in a Debug build. Release builds

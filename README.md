@@ -1,10 +1,8 @@
-<p align="center">
-  <img src="Packages/EarStudioKit/Sources/EarStudioAssets/Resources/SharedAssets.xcassets/ES100Product.imageset/es100.png" alt="EarStudio ES100 product photo by the project owner" width="246">
-</p>
+# ES100 Control for iOS and macOS
 
-# ES100 Control
+An independent companion app for **EarStudio ES100 and ES100 MK2**, with native iPhone and macOS apps.
 
-An independent companion app for **EarStudio ES100 and ES100 MK2**, with native macOS and iPhone apps.
+**[⬇ Download for iPhone on the App Store](https://apps.apple.com/fr/app/es100-control/id6837818492)** — requires iOS 17 or newer.
 
 **[⬇ Download for macOS - latest release](https://github.com/igorgarbuz/earstudio-mac/releases/latest)**
 
@@ -12,15 +10,25 @@ Choose the **`.dmg` file** under **Assets**, open it, and drag **ES100 Control**
 
 > **First launch:** the current app and DMG are **Developer ID signed and notarized by Apple**. Open ES100 Control normally from Applications. The DMG includes a stapled notarization ticket for offline verification.
 
-A good DAC shouldn’t spend its retirement in a drawer. The discontinued **EarStudio ES100 and ES100 MK2** still have plenty to offer: 24-bit/48 kHz USB audio on a Mac, analog volume control and a balanced headphone output. But with the original iOS and Android apps gone from their stores, owners rediscovering their devices can lose access to the settings that make them so useful.[^app-availability] I built **ES100 Control** to give this hardware a second life. With no official open-source app to build on, I studied decompiled code from the Android APK to understand how it talks to the firmware, then wrote an independent native macOS app. See the [research provenance](Docs/Provenance.md) for the evidence behind the implementation.
+<p align="center">
+  <img src="Packages/EarStudioKit/Sources/EarStudioAssets/Resources/SharedAssets.xcassets/ES100Product.imageset/es100.png" alt="EarStudio ES100 product photo by the project owner" width="246">
+</p>
+
+A good DAC shouldn’t spend its retirement in a drawer. The discontinued **EarStudio ES100 and ES100 MK2** still have plenty to offer: 24-bit/48 kHz USB audio on a Mac, analog volume control and a balanced headphone output. But with the original iOS and Android apps gone from their stores, owners rediscovering their devices can lose access to the settings that make them so useful.[^app-availability] I built **ES100 Control** to give this hardware a second life. With no official open-source app to build on, I studied decompiled code from the Android APK to understand how it talks to the firmware, then wrote independent native apps for macOS and iPhone. See the [research provenance](Docs/Provenance.md) for the evidence behind the implementation.
 
 Adjust the device’s equalizer, output, DAC processing, inputs, ambient/call settings and battery options from a SwiftUI interface inspired by the original Android app.
 
-Requires **macOS 14 or newer**. Release downloads contain both **Apple Silicon and Intel** code. No audio driver or Xcode installation is needed to use the app.
+The iPhone app requires **iOS 17 or newer**. The Mac app requires **macOS 14 or newer**, with release downloads for both **Apple Silicon and Intel**. No audio driver or Xcode installation is needed to use either app.
 
 This is an early community release, unaffiliated with Radsone. Physical testing has covered an ES100 running firmware 2.0.2; broader MK2 and older-firmware validation remains ongoing.
 
 ## Download and install
+
+### iPhone
+
+Install [ES100 Control from the App Store](https://apps.apple.com/fr/app/es100-control/id6837818492) on an iPhone running iOS 17 or newer. Open the app and allow Bluetooth access when prompted. You’ll need an EarStudio ES100 or ES100 MK2 to control its settings.
+
+### macOS
 
 **Earlier downloads:** releases published before the rename contain **EarStudio Companion.app**. Use that name in the steps below when installing an older release.
 
@@ -43,7 +51,7 @@ Each release includes a SHA-256 checksum. Download it beside the DMG and run `sh
 
 If upgrading from **EarStudio Companion**, quit the old app, install **ES100 Control**, and remove the old **EarStudio Companion.app** from Applications to avoid keeping two copies. Existing settings and device authorization remain in the same storage locations. Older releases still use the previous name.
 
-## Connect your EarStudio
+## Connect your EarStudio on macOS
 
 **Pair your ES100/MK2 with this Mac in macOS Bluetooth settings before choosing Connect in ES100 Control.** Pairing with a phone or another computer does not pair it with your Mac. The companion controls settings over Bluetooth, including when you use USB for audio; connecting a USB cable alone is not enough.
 
@@ -81,7 +89,7 @@ Controls follow recovered firmware version gates and require their settings to h
 
 The EQ matches the Android app’s **graphic equalizer**: fixed center frequencies and two Q options. It does not provide arbitrary parametric bands. The plotted curve estimates the response; the ES100 processes the audio. USB-format and hands-free-profile changes require restarting the device.
 
-Firmware flashing, factory reset, device renaming and playback transport controls are not included. An iPhone companion, **ES100 Control**, is also included and has been tested successfully on a physical iPhone with EarStudio hardware. See [iPhone development](Docs/iOS.md).
+Firmware flashing, factory reset, device renaming and playback transport controls are not included. The iPhone app is [available on the App Store](https://apps.apple.com/fr/app/es100-control/id6837818492) and has been tested successfully on a physical iPhone with EarStudio hardware. See [iPhone development](Docs/iOS.md).
 
 ## Preset compatibility
 
@@ -147,7 +155,7 @@ The repository contains the shipping macOS app and the **ES100 Control** iPhone 
 
 Regression tests cover protocol fixtures, every control against simulated firmware, unchanged neighboring fields, optional acknowledgements, signed units, firmware boundaries, queued edits, connection cleanup and process ownership. They complement hardware testing; they do not establish physical behavior of every setting or compatibility with every firmware version.
 
-Report bugs through [GitHub Issues](https://github.com/igorgarbuz/earstudio-mac/issues), including app/macOS/device firmware versions, reproduction steps and sanitized diagnostics. Exclude authentication keys and personal Bluetooth identifiers.
+Report bugs through [GitHub Issues](https://github.com/igorgarbuz/earstudio-mac/issues), including app, iOS/macOS and device firmware versions, reproduction steps and sanitized diagnostics. Exclude authentication keys and personal Bluetooth identifiers.
 
 ## Manuals and technical references
 
