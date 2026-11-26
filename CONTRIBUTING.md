@@ -6,7 +6,7 @@ Bug reports, documentation fixes, tests, and focused code changes are welcome. T
 
 Anyone with a GitHub account can open an [issue](https://github.com/igorgarbuz/earstudio-mac/issues). Search existing issues first, then use the bug report or feature request form when appropriate. Blank issues remain available for other topics.
 
-For bugs, include the app version or source commit, macOS version, Mac architecture, device model and firmware (if known), reproduction steps, expected behavior, and the exact error. State whether you used a physical device or demo mode.
+For bugs, include the app version or source commit, iOS/macOS version, iPhone model or Mac architecture, EarStudio model and firmware (if known), reproduction steps, expected behavior, and the exact error. State whether you used a physical device or demo mode.
 
 Inspect diagnostics and screenshots before posting. Remove device authentication keys, Bluetooth addresses, serial numbers, usernames, and personal paths. Never attach `device-keys.json`. Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 

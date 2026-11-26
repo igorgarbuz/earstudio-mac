@@ -11,15 +11,15 @@ body:
     id: app-version
     attributes:
       label: App version
-      description: Include the version/build number or source commit, and whether this is a release download or local build.
+      description: Include the version/build number or source commit, and whether this is an App Store install, downloaded DMG, or local build.
       placeholder: "1.0.9 (12), downloaded DMG"
     validations:
       required: true
   - type: input
-    id: macos-version
+    id: platform-version
     attributes:
-      label: macOS version and Mac architecture
-      placeholder: "macOS 15.7.9, Apple Silicon"
+      label: iOS/macOS version and iPhone model or Mac architecture
+      placeholder: "iOS 17, iPhone 13; or macOS 15.7.9, Apple Silicon"
     validations:
       required: true
   - type: dropdown

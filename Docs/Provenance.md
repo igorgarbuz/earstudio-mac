@@ -108,4 +108,4 @@ The five green bars originated in the initial Mac implementation (`012a059`, 202
 
 ## iPhone transport
 
-The independently implemented Core Bluetooth adapter uses the generic GAIA BLE profile described by Qualcomm-authored reference sources. Pinned references and the distinction between generic protocol evidence and unverified ES100 hardware compatibility are recorded in [iPhone development](iOS.md). No reference source or vendor binaries are bundled in the app.
+The independently implemented Core Bluetooth adapter uses the generic GAIA BLE profile described by Qualcomm-authored reference sources. Pinned references and the distinction between generic protocol evidence, reported physical-iPhone testing and remaining ES100/MK2 compatibility limits are recorded in [iPhone development](iOS.md). No reference source or vendor binaries are bundled in the app.
